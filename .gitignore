@@ -110,3 +110,6 @@ output*/
 
 # Test debug files
 tests/sync-db-data/*.json
+
+# DB debug files
+debug-db-data/*.json
