@@ -1,0 +1,36 @@
+{
+	"name": "elevoppfolging-server-jobs",
+	"version": "1.0.0",
+	"description": "",
+	"main": "dist/src/functions/*.js",
+	"engines": {
+		"node": ">=22.22.0"
+	},
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w",
+		"start": "func start",
+		"node:test": "MOCK_FINT=true node --import tsx --test tests/**/*.test.ts",
+		"test": "tsc --noEmit && biome check && node --test",
+		"lint": "npx @biomejs/biome check",
+		"lint:fix": "npx @biomejs/biome check --write",
+		"generate-fint-types": "node --env-file=.env node_modules/.bin/graphql-codegen",
+		"generate-fint-mock-data": "node ./scripts/generate-fint-mock-data.ts"
+	},
+	"dependencies": {
+		"@azure/functions": "^4.0.0",
+		"@faker-js/faker": "^10.2.0",
+		"@vestfoldfylke/loglady": "^1.5.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.13",
+		"@graphql-codegen/cli": "^6.1.1",
+		"@graphql-codegen/typescript": "^5.0.7",
+		"@graphql-codegen/typescript-operations": "^5.0.7",
+		"@microsoft/microsoft-graph-types": "^2.43.1",
+		"@types/node": "18.x",
+		"tsx": "^4.21.0",
+		"typescript": "^5.0.0"
+	}
+}
