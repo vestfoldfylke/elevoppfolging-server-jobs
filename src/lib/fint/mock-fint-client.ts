@@ -1,15 +1,16 @@
-import { existsSync, readFileSync } from "fs"
-import type { IFintClient } from "../../types/fint/fint-client"
-import type { FintSkoleInfo } from "../../types/fint/fint-school"
-import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-students"
+import { existsSync, readFileSync } from "node:fs"
+import type { IFintClient } from "../../types/fint/fint-client.js"
+import type { FintSkoleInfo } from "../../types/fint/fint-school.js"
+import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
+import { MOCK_FINT_DATA_PATH } from "../../config.js"
 
 export class MockFintClient implements IFintClient {
 	private mockSchools: FintSchoolWithStudents[]
 	constructor() {
-		if (!existsSync("./src/lib/fint/mock-schools.json")) {
-			throw new Error("Mock schools file not found at ./src/lib/fint/mock-schools.json - please run 'npm run generate-fint-mock-data' to create it")
+		if (!existsSync(MOCK_FINT_DATA_PATH)) {
+			throw new Error(`Mock schools file not found at ${MOCK_FINT_DATA_PATH} - please run 'npm run generate-fint-mock-data' to create it`)
 		}
-		const fileContent = readFileSync("./src/lib/fint/mock-schools.json", "utf-8")
+		const fileContent = readFileSync(MOCK_FINT_DATA_PATH, "utf-8")
 		try {
 			this.mockSchools = JSON.parse(fileContent) as FintSchoolWithStudents[]
 		} catch (error) {

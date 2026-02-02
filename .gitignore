@@ -112,4 +112,7 @@ output*/
 tests/sync-db-data/*.json
 
 # DB debug files
-debug-db-data/*.json
+debug-db/*.json
+
+# Mock fint dir
+mock-data/*.json

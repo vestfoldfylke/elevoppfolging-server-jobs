@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
-import type { Access, AppStudent, AppUser, IDbClient, NewAccess, NewAppStudent, NewAppUser } from "../../types/db"
+import type { Access, AppStudent, AppUser, IDbClient, NewAccess, NewAppStudent, NewAppUser } from "../../types/db.js"
 
 type MockDb = {
 	access: Access[]
@@ -37,6 +37,10 @@ export class MockDbClient implements IDbClient {
 		})
 		mockDb.students = students as AppStudent[]
 		writeFileSync(`${this.debugFolderPath}/mock-students.json`, JSON.stringify(students, null, 2))
+	}
+
+	async getUsers(): Promise<AppUser[]> {
+		return mockDb.users
 	}
 
 	async replaceUsers(users: (AppUser | NewAppUser)[]): Promise<void> {

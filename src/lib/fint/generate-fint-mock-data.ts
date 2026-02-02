@@ -1,5 +1,5 @@
 import { en, Faker, nb_NO } from "@faker-js/faker"
-import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../types/fint/fint-mock"
+import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../types/fint/fint-mock.js"
 import type {
 	FintElev,
 	FintElevforhold,
@@ -9,7 +9,7 @@ import type {
 	FintSchoolWithStudents,
 	FintUndervisningsforhold,
 	FintUndervisningsgruppe
-} from "../../types/fint/fint-school-with-students"
+} from "../../types/fint/fint-school-with-students.js"
 
 export const norwegianFaker = new Faker({
 	locale: [nb_NO, en]

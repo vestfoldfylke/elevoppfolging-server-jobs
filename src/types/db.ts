@@ -1,3 +1,5 @@
+import type { ObjectId } from "mongodb"
+
 /** Undervisningsforhold & Skoleressurs */
 export type Teacher = {
 	/** entra objectid knyttet til en bruker i Users-collection hvis læreren finnes der */
@@ -72,7 +74,7 @@ export type StudentEnrollment = {
 
 /** En elev i db for denne appen */
 export type AppStudent = {
-	_id: string
+	_id: ObjectId
 	/** FINT system-id for eleven */
 	systemId: string
 	/** Om eleven har et aktivt elevforhold */
@@ -160,7 +162,7 @@ export type TeachingGroupAutoAccessEntry = AutoAccessEntryBase & {
 }
 
 export type Access = {
-	_id: string
+	_id: ObjectId
 	entraUserId: string
 	name: string
 	schools: SchoolManualAccessEntry[]
@@ -174,8 +176,8 @@ export type Access = {
 export type NewAccess = Omit<Access, "_id">
 
 export type AppUser = {
-	_id: string
-	feidenavn?: string
+	_id: ObjectId
+	feideName: string
 	entra: {
 		id: string
 		userPrincipalName: string
@@ -189,9 +191,9 @@ export type NewAppUser = Omit<AppUser, "_id">
 
 export interface IDbClient {
 	getStudents: () => Promise<AppStudent[]>
-	replaceStudents: (students: AppStudent[]) => Promise<void>
-	addUsers: (users: NewAppUser[]) => Promise<void>
-	replaceUsers: (users: AppUser[]) => Promise<void>
+	replaceStudents: (students: (AppStudent | NewAppStudent)[]) => Promise<void>
+	getUsers: () => Promise<AppUser[]>
+	replaceUsers: (users: (AppUser | NewAppUser)[]) => Promise<void>
 	getAccess: () => Promise<Access[]>
-	replaceAccess: (accesses: Access[]) => Promise<void>
+	replaceAccess: (accesses: (Access | NewAccess)[]) => Promise<void>
 }

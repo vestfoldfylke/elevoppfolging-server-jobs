@@ -1,5 +1,6 @@
+import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
-import { MOCK_FINT } from "../../../config"
+import { FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
 	Access,
 	AppStudent,
@@ -17,7 +18,7 @@ import type {
 	Teacher,
 	TeachingGroupAutoAccessEntry,
 	TeachingGroupMembership
-} from "../../types/db"
+} from "../../types/db.js"
 import type {
 	FintElev,
 	FintElevforhold,
@@ -28,7 +29,7 @@ import type {
 	FintSkole,
 	FintUndervisningsforhold,
 	FintUndervisningsgruppemedlemskap
-} from "../../types/fint/fint-school-with-students"
+} from "../../types/fint/fint-school-with-students.js"
 
 export type StupidMaybeArray<T> = Array<T | null> | null | undefined
 
@@ -81,7 +82,8 @@ export const updateUsersStudentsAndAccess = (
 	currentAppUsers: AppUser[],
 	currentStudents: AppStudent[],
 	currentAccess: Access[],
-	fintSchoolsWithStudents: FintSchoolWithStudents[]
+	fintSchoolsWithStudents: FintSchoolWithStudents[],
+	enterpriseApplicationUsers: User[]
 ): { updatedAppUsers: (AppUser | NewAppUser)[]; updatedStudents: (AppStudent | NewAppStudent)[]; updatedAccess: (Access | NewAccess)[] } => {
 	const syncTimestamp: string = new Date().toISOString()
 
@@ -103,6 +105,41 @@ export const updateUsersStudentsAndAccess = (
 	})
 
 	// Internal helper/repack functions - don't need state, so no class for now
+	const upsertAppUser = (enterpriseApplicationUser: User) => {
+		let appUser: AppUser | NewAppUser | undefined = updatedAppUsers.find((user: AppUser | NewAppUser) => user.entra.id === enterpriseApplicationUser.id)
+		if (!appUser) {
+			if (
+				!enterpriseApplicationUser.id ||
+				!enterpriseApplicationUser.companyName ||
+				!enterpriseApplicationUser.displayName ||
+				!enterpriseApplicationUser.userPrincipalName ||
+				!enterpriseApplicationUser.onPremisesSamAccountName
+			) {
+				logger.error("User from EntraID is missing crucial info, skipping user: {@User}", enterpriseApplicationUser)
+				return
+			}
+			logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
+			appUser = {
+				feideName: `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`,
+				entra: {
+					id: enterpriseApplicationUser.id,
+					userPrincipalName: enterpriseApplicationUser.userPrincipalName,
+					displayName: enterpriseApplicationUser.displayName,
+					companyName: enterpriseApplicationUser.companyName,
+					department: enterpriseApplicationUser.department
+				}
+			}
+			updatedAppUsers.push(appUser)
+			return
+		}
+		// Update existing user info
+		appUser.entra.userPrincipalName = enterpriseApplicationUser.userPrincipalName
+		appUser.entra.displayName = enterpriseApplicationUser.displayName
+		appUser.entra.companyName = enterpriseApplicationUser.companyName
+		appUser.entra.department = enterpriseApplicationUser.department
+		appUser.feideName = `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`
+	}
+
 	const addFintMockTeacherToAppUsers = (undervisningsforhold: FintUndervisningsforhold): NewAppUser => {
 		if (!MOCK_FINT) {
 			throw new Error("addFintMockUsersToAppUsers should only be called when MOCK_FINT is true")
@@ -116,7 +153,7 @@ export const updateUsersStudentsAndAccess = (
 		const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Mockesen"
 		// add to app users - and use inside repack, for now. Det er mock-lærere, så vi driter i å oppdatere navn osv.
 		const mockAppUser: NewAppUser = {
-			feidenavn: feideName,
+			feideName,
 			entra: {
 				id: `mock-${feideName}`,
 				userPrincipalName: feideName,
@@ -130,7 +167,7 @@ export const updateUsersStudentsAndAccess = (
 	}
 
 	const findUserByFeideName = (feideName: string): AppUser | NewAppUser | null => {
-		const user: AppUser | NewAppUser | undefined = updatedAppUsers.find((appUser: AppUser | NewAppUser) => appUser.feidenavn?.toLowerCase() === feideName.toLowerCase())
+		const user: AppUser | NewAppUser | undefined = updatedAppUsers.find((appUser: AppUser | NewAppUser) => appUser.feideName?.toLowerCase() === feideName.toLowerCase())
 		return user || null
 	}
 
@@ -276,6 +313,14 @@ export const updateUsersStudentsAndAccess = (
 	}
 
 	// Main mapping logic
+	logger.info("Starter synk av brukere, elever og tilganger basert på FINT-data og EntraID-brukere")
+	logger.info("Synker litt entrabrukere")
+	enterpriseApplicationUsers.forEach((enterpriseApplicationUser: User) => {
+		upsertAppUser(enterpriseApplicationUser)
+	})
+	logger.info("Synket ferdig litt entrabrukere")
+
+	logger.info("Starter synk av elever og tilganger basert på FINT-data")
 	for (const schoolWithStudents of fintSchoolsWithStudents) {
 		if (!schoolWithStudents.skole) {
 			logger.error("Fikk ikke skole-data for skole med skolenummer {SchoolNumber}, hopper over", schoolWithStudents.skole.skolenummer.identifikatorverdi)
@@ -408,6 +453,7 @@ export const updateUsersStudentsAndAccess = (
 			currentStudent.active = currentStudent.studentEnrollments.some((enrollment) => enrollment.period.active)
 		}
 	}
+	logger.info("Ferdig med synk av elever og tilganger basert på FINT-data")
 	return {
 		updatedAppUsers,
 		updatedStudents,

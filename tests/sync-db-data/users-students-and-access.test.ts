@@ -1,11 +1,12 @@
 import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
-import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data"
-import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access"
-import type { Access, AppStudent, AppUser, NewAccess, NewAppUser } from "../../src/types/db"
-import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock"
-import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students"
+import { ObjectId } from "mongodb"
+import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
+import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
+import type { Access, AppStudent, AppUser, NewAccess, NewAppUser } from "../../src/types/db.js"
+import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
+import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 
 const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (AppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
 	const user = users.find((user) => user.entra.id === access.entraUserId)
@@ -20,13 +21,13 @@ const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: Fint
 			if (!repackPeriode(ef.gyldighetsperiode).active) return false
 			if (!repackPeriode(classToCheck.gyldighetsperiode).active) return false
 			return classToCheck.klasse.undervisningsforhold.some((uf) => {
-				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feidenavn
+				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
 			})
 		})
 		if (!shouldHaveAccess)
 			return {
 				valid: false,
-				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feidenavn}) should not have access to class ${classAccess.systemId} at school ${classAccess.schoolNumber}`
+				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to class ${classAccess.systemId} at school ${classAccess.schoolNumber}`
 			}
 	}
 
@@ -39,13 +40,13 @@ const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: Fint
 			if (!repackPeriode(ef.gyldighetsperiode).active) return false
 			if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
 			return groupToCheck.undervisningsgruppe.undervisningsforhold.some((uf) => {
-				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feidenavn
+				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
 			})
 		})
 		if (!shouldHaveAccess)
 			return {
 				valid: false,
-				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feidenavn}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
+				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
 			}
 	}
 
@@ -58,13 +59,13 @@ const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: Fint
 			if (!repackPeriode(ef.gyldighetsperiode).active) return false
 			if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
 			return groupToCheck.kontaktlarergruppe.undervisningsforhold.some((uf) => {
-				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feidenavn
+				return uf.skoleressurs.feidenavn.identifikatorverdi.length > 0 && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
 			})
 		})
 		if (!shouldHaveAccess)
 			return {
 				valid: false,
-				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feidenavn}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
+				reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
 			}
 	}
 	return { valid: true, reason: "" }
@@ -159,7 +160,7 @@ describe("sync-db-data/users-students-and-access", () => {
 	writeFileSync("./tests/sync-db-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))
 
 	describe("data is mapped correctly when only given mockSchools", () => {
-		const result = updateUsersStudentsAndAccess([], [], [], mockSchools)
+		const result = updateUsersStudentsAndAccess([], [], [], mockSchools, [])
 
 		it("should create correct number of students without duplicates", () => {
 			assert(result.updatedStudents.length === mockConfig.numberOfStudents, `Expected ${mockConfig.numberOfStudents} students, got ${result.updatedStudents.length}`)
@@ -183,9 +184,10 @@ describe("sync-db-data/users-students-and-access", () => {
 	})
 
 	describe("data is mapped and updated correctly when previous data is present", () => {
+		const existingUserId = new ObjectId()
 		const currentUsers: AppUser[] = [
 			{
-				_id: "existing-user-id",
+				_id: existingUserId,
 				entra: {
 					id: "existing-user-id",
 					companyName: "Existing Company",
@@ -193,7 +195,7 @@ describe("sync-db-data/users-students-and-access", () => {
 					displayName: "Existing User",
 					userPrincipalName: "existing.user@company.com"
 				},
-				feidenavn: "existing.feidenavn"
+				feideName: "existing.feidenavn"
 			}
 		]
 
@@ -230,7 +232,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
 		const currentStudents: AppStudent[] = [
 			{
-				_id: "student-to-update-name-and-elevnummer",
+				_id: new ObjectId(),
 				feideName: studentNameUpdate.feidenavn.identifikatorverdi,
 				active: false,
 				name: "Et navn som skal oppdateres",
@@ -255,7 +257,7 @@ describe("sync-db-data/users-students-and-access", () => {
 				systemId: studentNameUpdate.systemId.identifikatorverdi
 			},
 			{
-				_id: "student-to-update-ssn",
+				_id: new ObjectId(),
 				feideName: studentSsnUpdate.feidenavn.identifikatorverdi,
 				active: false,
 				name: "Et navn som skal oppdateres",
@@ -280,7 +282,7 @@ describe("sync-db-data/users-students-and-access", () => {
 				systemId: studentSsnUpdate.systemId.identifikatorverdi
 			},
 			{
-				_id: "student-to-update-systemID",
+				_id: new ObjectId(),
 				feideName: studentSystemIdUpdate.feidenavn.identifikatorverdi,
 				active: false,
 				name: "Et navn som skal oppdateres",
@@ -305,7 +307,7 @@ describe("sync-db-data/users-students-and-access", () => {
 				systemId: "oppdater-meg"
 			},
 			{
-				_id: "student-not-longer-in-fint",
+				_id: new ObjectId(),
 				feideName: "jeg-finnes-ikke-i-fint-lenger",
 				active: true,
 				name: "Et navn som ikke skal oppdateres",
@@ -331,9 +333,10 @@ describe("sync-db-data/users-students-and-access", () => {
 			}
 		]
 
+		const existingAccessId = new ObjectId()
 		const currentAccess: Access[] = [
 			{
-				_id: "existing-access-id",
+				_id: existingAccessId,
 				entraUserId: currentUsers[0].entra.id,
 				name: "Eksisterende bruker",
 				programAreas: [],
@@ -396,7 +399,7 @@ describe("sync-db-data/users-students-and-access", () => {
 			}
 		]
 
-		const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools)
+		const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools, [])
 		writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
 		it("should create correct number of students without duplicates", () => {
@@ -415,7 +418,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should update existing student name and student number correctly", () => {
-			const updatedStudent = result.updatedStudents.find((s) => (s as AppStudent)._id === "student-to-update-name-and-elevnummer")
+			const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentNameUpdate.systemId.identifikatorverdi)
 			assert(updatedStudent, "Updated student not found")
 			assert(!updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes"), "Expected old enrollment to be removed")
 			assert(
@@ -429,7 +432,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should update existing student ssn correctly", () => {
-			const updatedStudent = result.updatedStudents.find((s) => (s as AppStudent)._id === "student-to-update-ssn")
+			const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentSsnUpdate.systemId.identifikatorverdi)
 			assert(updatedStudent, "Updated student not found")
 			assert(
 				updatedStudent.ssn === studentSsnUpdate.person.fodselsnummer.identifikatorverdi,
@@ -438,7 +441,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should update existing student systemId correctly", () => {
-			const updatedStudent = result.updatedStudents.find((s) => (s as AppStudent)._id === "student-to-update-systemID")
+			const updatedStudent = result.updatedStudents.find((s) => s.ssn === studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi)
 			assert(updatedStudent, "Updated student not found")
 			assert(
 				updatedStudent.systemId === studentSystemIdUpdate.systemId.identifikatorverdi,
@@ -447,7 +450,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should deactivate students and remove enrollments when student is no longer in FINT", () => {
-			const deactivatedStudent = result.updatedStudents.find((s) => (s as AppStudent)._id === "student-not-longer-in-fint")
+			const deactivatedStudent = result.updatedStudents.find((s) => s.systemId === "jeg-finnes-ikke-i-fint-lenger")
 			assert(deactivatedStudent, "Deactivated student not found")
 			assert(deactivatedStudent.active === false, `Expected student to be inactive, got active=${deactivatedStudent.active}`)
 			assert(deactivatedStudent.name === "Et navn som ikke skal oppdateres", `Expected student name to be unchanged, got "${deactivatedStudent.name}"`)
@@ -455,7 +458,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should update existing access correctly", () => {
-			const updatedAccess = result.updatedAccess.find((a) => (a as Access)._id === "existing-access-id")
+			const updatedAccess = result.updatedAccess.find((a) => (a as Access)._id.toString() === existingAccessId.toString())
 			assert(updatedAccess, "Updated access not found")
 			assert(
 				updatedAccess.classes.find((c) => c.type === "MANUELL-KLASSE-TILGANG" && c.systemId === "jeg-skal-ikke-bli-borte"),
