@@ -6,7 +6,7 @@ import type { IDbClient } from "../../types/db/db-client.js"
 
 export class MongoDbClient implements IDbClient {
 	private readonly mongoClient: MongoClient
-	private db: Db
+	private db: Db | null = null
 
 	constructor() {
 		if (!MONGODB.CONNECTION_STRING) {
