@@ -16,7 +16,7 @@ const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudent
 
 if (!existsSync("./mock-data")) {
 	logger.info("Creating mock-data directory...")
-	mkdirSync("./mock-data")	
+	mkdirSync("./mock-data")
 }
 
 writeFileSync("./mock-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs"
+import { MOCK_FINT_DATA_PATH } from "../../config.js"
 import type { IFintClient } from "../../types/fint/fint-client.js"
 import type { FintSkoleInfo } from "../../types/fint/fint-school.js"
 import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
-import { MOCK_FINT_DATA_PATH } from "../../config.js"
 
 export class MockFintClient implements IFintClient {
 	private mockSchools: FintSchoolWithStudents[]

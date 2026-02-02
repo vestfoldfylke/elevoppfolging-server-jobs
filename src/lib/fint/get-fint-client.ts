@@ -12,7 +12,6 @@ if (MOCK_FINT) {
 
 export const getFintClient = (): IFintClient => fintClient
 
-
 /* I test med mock data
 
 Hvis vi skal ha persistent mock-data, så kan vi enten fyre det opp en gang lokalt - og bare drite i sync i test-azf
