@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
-import type { Access, AppStudent, AppUser, IDbClient, NewAccess, NewAppStudent, NewAppUser } from "../../types/db.js"
+import type { Access, AppStudent, AppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/db.js"
+import type { IDbClient } from "../../types/db/db-client.js"
 
 type MockDb = {
 	access: Access[]

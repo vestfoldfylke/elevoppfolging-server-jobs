@@ -4,7 +4,7 @@ import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { Access, AppStudent, AppUser, NewAccess, NewAppUser } from "../../src/types/db.js"
+import type { Access, AppStudent, AppUser, NewAccess, NewAppUser } from "../../src/types/db/db.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 

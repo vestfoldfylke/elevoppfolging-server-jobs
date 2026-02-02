@@ -1,7 +1,8 @@
 import { logger } from "@vestfoldfylke/loglady"
 import { type Db, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
-import type { Access, AppStudent, AppUser, IDbClient, NewAccess, NewAppStudent, NewAppUser } from "../../types/db.js"
+import type { Access, AppStudent, AppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/db.js"
+import type { IDbClient } from "../../types/db/db-client.js"
 
 export class MongoDbClient implements IDbClient {
 	private readonly mongoClient: MongoClient

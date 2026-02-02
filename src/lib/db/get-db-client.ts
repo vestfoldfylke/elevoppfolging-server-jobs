@@ -1,5 +1,5 @@
 import { MOCK_DB } from "../../config.js"
-import type { IDbClient } from "../../types/db.js"
+import type { IDbClient } from "../../types/db/db-client.js"
 import { MockDbClient } from "./mock-db-client.js"
 import { MongoDbClient } from "./mongo-db-client.js"
 

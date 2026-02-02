@@ -189,11 +189,3 @@ export type AppUser = {
 
 export type NewAppUser = Omit<AppUser, "_id">
 
-export interface IDbClient {
-	getStudents: () => Promise<AppStudent[]>
-	replaceStudents: (students: (AppStudent | NewAppStudent)[]) => Promise<void>
-	getUsers: () => Promise<AppUser[]>
-	replaceUsers: (users: (AppUser | NewAppUser)[]) => Promise<void>
-	getAccess: () => Promise<Access[]>
-	replaceAccess: (accesses: (Access | NewAccess)[]) => Promise<void>
-}

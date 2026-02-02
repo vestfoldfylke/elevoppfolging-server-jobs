@@ -18,7 +18,7 @@ import type {
 	Teacher,
 	TeachingGroupAutoAccessEntry,
 	TeachingGroupMembership
-} from "../../types/db.js"
+} from "../../types/db/db.js"
 import type {
 	FintElev,
 	FintElevforhold,
