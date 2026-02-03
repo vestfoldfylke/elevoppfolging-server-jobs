@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
-import type { Access, AppStudent, AppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/db.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppStudent, NewDbAppUser } from "../../types/db/db.js"
 import type { IDbClient } from "../../types/db/db-client.js"
 
 type MockDb = {
-	access: Access[]
-	students: AppStudent[]
-	users: AppUser[]
+	access: DbAccess[]
+	students: DbAppStudent[]
+	users: DbAppUser[]
 }
 
 /**
@@ -26,45 +26,45 @@ export class MockDbClient implements IDbClient {
 		}
 	}
 
-	async getStudents(): Promise<AppStudent[]> {
+	async getStudents(): Promise<DbAppStudent[]> {
 		return mockDb.students
 	}
 
-	async replaceStudents(students: (AppStudent | NewAppStudent)[]): Promise<void> {
+	async replaceStudents(students: (DbAppStudent | NewDbAppStudent)[]): Promise<void> {
 		students.forEach((student) => {
 			if (!("_id" in student)) {
-				;(student as AppStudent)._id = new ObjectId()
+				;(student as DbAppStudent)._id = new ObjectId()
 			}
 		})
-		mockDb.students = students as AppStudent[]
+		mockDb.students = students as DbAppStudent[]
 		writeFileSync(`${this.debugFolderPath}/mock-students.json`, JSON.stringify(students, null, 2))
 	}
 
-	async getUsers(): Promise<AppUser[]> {
+	async getUsers(): Promise<DbAppUser[]> {
 		return mockDb.users
 	}
 
-	async replaceUsers(users: (AppUser | NewAppUser)[]): Promise<void> {
+	async replaceUsers(users: (DbAppUser | NewDbAppUser)[]): Promise<void> {
 		users.forEach((user) => {
 			if (!("_id" in user)) {
-				;(user as AppUser)._id = new ObjectId()
+				;(user as DbAppUser)._id = new ObjectId()
 			}
 		})
-		mockDb.users = users as AppUser[]
+		mockDb.users = users as DbAppUser[]
 		writeFileSync(`${this.debugFolderPath}/mock-users.json`, JSON.stringify(users, null, 2))
 	}
 
-	async getAccess(): Promise<Access[]> {
+	async getAccess(): Promise<DbAccess[]> {
 		return mockDb.access
 	}
 
-	async replaceAccess(accesses: (Access | NewAccess)[]): Promise<void> {
+	async replaceAccess(accesses: (DbAccess | NewDbAccess)[]): Promise<void> {
 		accesses.forEach((access) => {
 			if (!("_id" in access)) {
-				;(access as Access)._id = new ObjectId()
+				;(access as DbAccess)._id = new ObjectId()
 			}
 		})
-		mockDb.access = accesses as Access[]
+		mockDb.access = accesses as DbAccess[]
 		writeFileSync(`${this.debugFolderPath}/mock-access.json`, JSON.stringify(accesses, null, 2))
 	}
 }

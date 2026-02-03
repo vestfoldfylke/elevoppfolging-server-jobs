@@ -4,11 +4,11 @@ import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { Access, AppStudent, AppUser, NewAccess, NewAppUser } from "../../src/types/db/db.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppUser } from "../../src/types/db/db.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 
-const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (AppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
+const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewDbAppUser)[]): { valid: boolean; reason: string } => {
 	const user = users.find((user) => user.entra.id === access.entraUserId)
 	if (!user) return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
 
@@ -71,7 +71,7 @@ const isValidAutoAccess = (access: Access | NewAccess, schoolsWithStudents: Fint
 	return { valid: true, reason: "" }
 }
 
-const studentIsValid = (student: AppStudent, schoolsWithStudents: FintSchoolWithStudents[]): { valid: boolean; reason: string } => {
+const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[]): { valid: boolean; reason: string } => {
 	for (const enrollment of student.studentEnrollments) {
 		const school = schoolsWithStudents.find((s) => s.skole.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
 		if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
@@ -177,7 +177,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 		it("should create valid students", () => {
 			for (const student of result.updatedStudents) {
-				const validation = studentIsValid(student as AppStudent, mockSchools)
+				const validation = studentIsValid(student as DbAppStudent, mockSchools)
 				assert(validation.valid, `Student validation failed: ${validation.reason}`)
 			}
 		})
@@ -185,7 +185,7 @@ describe("sync-db-data/users-students-and-access", () => {
 
 	describe("data is mapped and updated correctly when previous data is present", () => {
 		const existingUserId = new ObjectId()
-		const currentUsers: AppUser[] = [
+		const currentUsers: DbAppUser[] = [
 			{
 				_id: existingUserId,
 				entra: {
@@ -230,7 +230,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
 		const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate])
 		if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
-		const currentStudents: AppStudent[] = [
+		const currentStudents: DbAppStudent[] = [
 			{
 				_id: new ObjectId(),
 				feideName: studentNameUpdate.feidenavn.identifikatorverdi,
@@ -334,12 +334,25 @@ describe("sync-db-data/users-students-and-access", () => {
 		]
 
 		const existingAccessId = new ObjectId()
-		const currentAccess: Access[] = [
+		const currentAccess: DbAccess[] = [
 			{
 				_id: existingAccessId,
 				entraUserId: currentUsers[0].entra.id,
 				name: "Eksisterende bruker",
-				programAreas: [],
+				programAreas: [
+					{
+						type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG",
+						_id: "jeg-skal-ikke-bli-borte",
+						schoolNumber: "69",
+						granted: {
+							at: "samma driten",
+							by: {
+								_id: "some-admin-id",
+								name: "Some Admin"
+							}
+						}
+					}
+				],
 				schools: [],
 				students: [],
 				classes: [
@@ -352,18 +365,6 @@ describe("sync-db-data/users-students-and-access", () => {
 							by: {
 								_id: "SYSTEM",
 								name: "SYNC JOB"
-							}
-						}
-					},
-					{
-						type: "MANUELL-KLASSE-TILGANG",
-						systemId: "jeg-skal-ikke-bli-borte",
-						schoolNumber: "69",
-						granted: {
-							at: "samma driten",
-							by: {
-								_id: "some-admin-id",
-								name: "Some Admin"
 							}
 						}
 					}
@@ -458,11 +459,11 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 
 		it("should update existing access correctly", () => {
-			const updatedAccess = result.updatedAccess.find((a) => (a as Access)._id.toString() === existingAccessId.toString())
+			const updatedAccess = result.updatedAccess.find((a) => (a as DbAccess)._id.toString() === existingAccessId.toString())
 			assert(updatedAccess, "Updated access not found")
 			assert(
-				updatedAccess.classes.find((c) => c.type === "MANUELL-KLASSE-TILGANG" && c.systemId === "jeg-skal-ikke-bli-borte"),
-				"Expected manual class access to be preserved"
+				updatedAccess.programAreas.find((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG" && c._id === "jeg-skal-ikke-bli-borte"),
+				"Expected manual programArea access to be preserved"
 			)
 			assert(!updatedAccess.classes.find((c) => c.type === "AUTOMATISK-KLASSE-TILGANG" && c.systemId === "jeg-skal-bli-borte"), "Expected old automatic class access to be removed")
 			assert(
@@ -476,7 +477,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 		it("should create valid students", () => {
 			for (const student of result.updatedStudents) {
-				const validation = studentIsValid(student as AppStudent, mockSchools)
+				const validation = studentIsValid(student as DbAppStudent, mockSchools)
 				assert(validation.valid, `Student validation failed: ${validation.reason}`)
 			}
 		})

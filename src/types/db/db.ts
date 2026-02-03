@@ -73,7 +73,7 @@ export type StudentEnrollment = {
 }
 
 /** En elev i db for denne appen */
-export type AppStudent = {
+export type DbAppStudent = {
 	_id: ObjectId
 	/** FINT system-id for eleven */
 	systemId: string
@@ -87,9 +87,9 @@ export type AppStudent = {
 	lastSynced: string
 }
 
-export type NewAppStudent = Omit<AppStudent, "_id">
+export type NewDbAppStudent = Omit<DbAppStudent, "_id">
 
-export type ManualAccessEntryBase = {
+export type AccessEntryBase = {
 	/** Hvilken skole gjelder tilgangen for */
 	schoolNumber: string
 	/** Hvem har gitt tilgangen */
@@ -102,80 +102,57 @@ export type ManualAccessEntryBase = {
 	}
 }
 
-export type AutoAccessEntryBase = {
-	/** Hvilken skole gjelder tilgangen for */
-	schoolNumber: string
-	/** Når ble tilgangen automatisk gitt (ved synk mot FINT) */
-	granted: {
-		by: {
-			_id: "SYSTEM"
-			name: "SYNC JOB"
-		}
-		at: string
-	}
-}
-
-export type SchoolManualAccessEntry = ManualAccessEntryBase & {
+export type SchoolManualAccessEntry = AccessEntryBase & {
 	type: "MANUELL-SKOLELEDER-TILGANG"
 }
 
-export type ProgramAreaManualAccessEntry = ManualAccessEntryBase & {
+export type ProgramAreaManualAccessEntry = AccessEntryBase & {
 	/** Entydig identifikator (db _id) for hvilket undervisningsområde det er gitt tilgang til */
 	_id: string
 	type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG"
 }
 
-export type ClassManualAccessEntry = ManualAccessEntryBase & {
-	/** FINT system-id for klassen det er gitt tilgang til */
-	systemId: string
-	type: "MANUELL-KLASSE-TILGANG"
-}
-
-export type TeachingGroupManualAccessEntry = ManualAccessEntryBase & {
-	/** FINT system-id for undervisningsgruppen det er gitt tilgang til */
-	systemId: string
-	type: "MANUELL-UNDERVISNINGSGRUPPE-TILGANG"
-}
-
-export type StudentManualAccessEntry = ManualAccessEntryBase & {
+export type StudentManualAccessEntry = AccessEntryBase & {
 	/** FINT system-id for eleven det er gitt tilgang til */
 	systemId: string
 	type: "MANUELL-ELEV-TILGANG"
 }
 
-export type ClassAutoAccessEntry = AutoAccessEntryBase & {
+export type ClassAutoAccessEntry = AccessEntryBase & {
 	/** FINT system-id for klassen det er gitt tilgang til */
 	systemId: string
 	type: "AUTOMATISK-KLASSE-TILGANG"
 }
 
-export type ContactTeacherGroupAutoAccessEntry = AutoAccessEntryBase & {
+export type ContactTeacherGroupAutoAccessEntry = AccessEntryBase & {
 	/** FINT system-id for undervisningsgruppen det er gitt tilgang til */
 	systemId: string
 	type: "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG"
 }
 
-export type TeachingGroupAutoAccessEntry = AutoAccessEntryBase & {
+export type TeachingGroupAutoAccessEntry = AccessEntryBase & {
 	/** FINT system-id for undervisningsgruppen det er gitt tilgang til */
 	systemId: string
 	type: "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG"
 }
 
-export type Access = {
+export type DbAccess = {
 	_id: ObjectId
 	entraUserId: string
 	name: string
 	schools: SchoolManualAccessEntry[]
 	programAreas: ProgramAreaManualAccessEntry[]
-	classes: (ClassManualAccessEntry | ClassAutoAccessEntry)[]
+	classes: ClassAutoAccessEntry[]
 	contactTeacherGroups: ContactTeacherGroupAutoAccessEntry[]
 	teachingGroups: TeachingGroupAutoAccessEntry[]
 	students: StudentManualAccessEntry[]
 }
 
-export type NewAccess = Omit<Access, "_id">
+export type AccessType = SchoolManualAccessEntry | ProgramAreaManualAccessEntry | StudentManualAccessEntry | ClassAutoAccessEntry | ContactTeacherGroupAutoAccessEntry | TeachingGroupAutoAccessEntry
 
-export type AppUser = {
+export type NewDbAccess = Omit<DbAccess, "_id">
+
+export type DbAppUser = {
 	_id: ObjectId
 	feideName: string
 	entra: {
@@ -187,5 +164,4 @@ export type AppUser = {
 	}
 }
 
-export type NewAppUser = Omit<AppUser, "_id">
-
+export type NewDbAppUser = Omit<DbAppUser, "_id">
