@@ -148,8 +148,6 @@ export type DbAccess = {
 	students: StudentManualAccessEntry[]
 }
 
-export type AccessType = SchoolManualAccessEntry | ProgramAreaManualAccessEntry | StudentManualAccessEntry | ClassAutoAccessEntry | ContactTeacherGroupAutoAccessEntry | TeachingGroupAutoAccessEntry
-
 export type NewDbAccess = Omit<DbAccess, "_id">
 
 export type DbAppUser = {

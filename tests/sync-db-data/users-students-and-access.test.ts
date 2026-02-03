@@ -162,8 +162,7 @@ describe("sync-db-data/users-students-and-access", () => {
 	describe("data is mapped correctly when only given mockSchools", () => {
 		const result = updateUsersStudentsAndAccess([], [], [], mockSchools, [])
 
-		it("should create correct number of students without duplicates", () => {
-			assert(result.updatedStudents.length === mockConfig.numberOfStudents, `Expected ${mockConfig.numberOfStudents} students, got ${result.updatedStudents.length}`)
+		it("should create students without duplicates", () => {
 			// find duplicate students
 			const studentIds = result.updatedStudents.map((s) => s.feideName)
 			const uniqueStudentIds = new Set(studentIds)
@@ -403,8 +402,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools, [])
 		writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
-		it("should create correct number of students without duplicates", () => {
-			assert(result.updatedStudents.length === mockConfig.numberOfStudents + 1, `Expected ${mockConfig.numberOfStudents + 1} students, got ${result.updatedStudents.length}`)
+		it("should create students without duplicates", () => {
 			// find duplicate students
 			const studentIds = result.updatedStudents.map((s) => s.feideName)
 			const uniqueStudentIds = new Set(studentIds)

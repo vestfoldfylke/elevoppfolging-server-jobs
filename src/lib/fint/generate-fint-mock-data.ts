@@ -1,4 +1,5 @@
 import { en, Faker, nb_NO } from "@faker-js/faker"
+import { logger } from "@vestfoldfylke/loglady"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../types/fint/fint-mock.js"
 import type {
 	FintElev,
@@ -175,28 +176,19 @@ const generateElevforhold = (elev: FintElev, klasse: FintKlasse[], undervisnings
 	}
 }
 
-const generateSchool = (name: string, elevforhold: FintElevforhold[]): FintSchoolWithStudents => {
+const generateSchool = (name: string): FintSchoolWithStudents => {
 	return {
 		skole: {
 			skolenummer: {
 				identifikatorverdi: norwegianFaker.string.numeric(8)
 			},
 			navn: name,
-			elevforhold: elevforhold
+			elevforhold: []
 		}
 	}
 }
 
 export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintSchoolsWithStudentsOptions): FintSchoolWithStudents[] => {
-	/*
-  Så hvis vi først lager en haug med undervisningsforhold (lærere)
-  Deretter kan vi lage en haug med klasser, kontaktlærergrupper og undervisningsgrupper som bruker disse lærerne
-  Så kan vi lage en haug med elever
-    Så kan vi lage en haug med elevforhold som binder sammen elever, klasser, undervisningsgrupper, kontaktlærergrupper og programområder, litt random. Noen har gyldige perioder, noen har utgåtte, noen har fremtidige
-      Pass på at noen elever har flere elevforhold til flere skoler (hovedskole og ikke-hovedskole)
-      Så kan vi lage noen skoler, og putte elevforholdene litt random inn i disse skolene
-  */
-
 	if (config.schoolNames.length < 2) {
 		throw new Error("At least two schools must be provided")
 	}
@@ -207,94 +199,88 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 		throw new Error("All numeric configuration values must be at least 5")
 	}
 
-	const undervisningsforholdPool: FintUndervisningsforhold[] = []
-	for (let i = 0; i < config.numberOfUndervisningsforhold; i++) {
-		undervisningsforholdPool.push(generateUndervisningsforhold())
-	}
-
-	const klasserPool: FintKlasse[] = []
-	for (let i = 0; i < config.numberOfKlasser; i++) {
-		const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
-		klasserPool.push(generateKlasse(undervisningsforhold))
-	}
-
-	const undervisningsgrupperPool: FintUndervisningsgruppe[] = []
-	for (let i = 0; i < config.numberOfUndervisningsgrupper; i++) {
-		const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
-		undervisningsgrupperPool.push(generateUndervisningsgruppe(undervisningsforhold))
-	}
-
-	const kontaktlarergrupperPool: FintKontaktlarergruppe[] = []
-	for (let i = 0; i < config.numberOfKontaktlarergrupper; i++) {
-		const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
-		kontaktlarergrupperPool.push(generateKontaktlarergruppe(undervisningsforhold))
-	}
-
 	const elevPool: FintElev[] = []
 	for (let i = 0; i < config.numberOfStudents; i++) {
 		elevPool.push(generateElev())
 	}
 
-	const elevforholdPool: FintElevforhold[] = []
-	elevPool.forEach((elev, index) => {
-		const klasse = norwegianFaker.helpers.arrayElements(klasserPool, { min: 1, max: 3 })
-		const undervisningsgrupper = norwegianFaker.helpers.arrayElements(undervisningsgrupperPool, { min: 1, max: 8 })
-		const kontaktlarergrupper = norwegianFaker.helpers.arrayElements(kontaktlarergrupperPool, { min: 1, max: 2 })
-		// Make sure we have some variants of all periods
-		if (index === 0) {
-			const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
-			elevforhold.gyldighetsperiode = validPeriod
-			elevforhold.klassemedlemskap[0].gyldighetsperiode = expiredPeriod
-			elevforhold.undervisningsgruppemedlemskap[0].gyldighetsperiode = futurePeriod
-			elevforholdPool.push(elevforhold)
-			return
-		}
-		if (index === 1) {
-			const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
-			elevforhold.gyldighetsperiode = expiredPeriod
-			elevforholdPool.push(elevforhold)
-			return
-		}
-		if (index === 2) {
-			const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
-			elevforhold.gyldighetsperiode = futurePeriod
-			elevforholdPool.push(elevforhold)
-			return
-		}
-		elevforholdPool.push(generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper))
-	})
-
 	const schools: FintSchoolWithStudents[] = []
-	config.schoolNames.forEach((schoolName) => {
-		const atLeastOneMaxHalf = norwegianFaker.helpers.rangeToNumber({ min: 1, max: Math.ceil(elevforholdPool.length / config.schoolNames.length) })
-		const elevforholdToAdd = elevforholdPool.splice(0, atLeastOneMaxHalf)
-		schools.push(generateSchool(schoolName, elevforholdToAdd))
-	})
-	// Then just add the rest to the last school
-	if (elevforholdPool.length > 0) {
-		schools[schools.length - 1].skole.elevforhold.push(...elevforholdPool)
-	}
+	config.schoolNames.forEach((schoolName, schoolIndex) => {
+		const schoolToAdd: FintSchoolWithStudents = generateSchool(schoolName)
 
-	// Then we create a couple of elevforhold that link to random schools to ensure we have some cross-school data
-	const getRandomElev = (schoolIndex): FintElev => {
-		const school = schools[schoolIndex]
-		return norwegianFaker.helpers.arrayElement(school.skole.elevforhold).elev
-	}
-
-	for (let i = 0; i < 5; i++) {
-		const fromSchoolIndex = norwegianFaker.number.int({ min: 0, max: schools.length - 1 })
-		let toSchoolIndex = norwegianFaker.number.int({ min: 0, max: schools.length - 1 })
-		while (toSchoolIndex === fromSchoolIndex) {
-			toSchoolIndex = norwegianFaker.number.int({ min: 0, max: schools.length - 1 })
+		const undervisningsforholdPool: FintUndervisningsforhold[] = []
+		for (let i = 0; i < config.numberOfUndervisningsforhold; i++) {
+			undervisningsforholdPool.push(generateUndervisningsforhold())
 		}
-		const elev = getRandomElev(fromSchoolIndex)
-		const klasse = norwegianFaker.helpers.arrayElements(klasserPool, { min: 1, max: 2 })
-		const undervisningsgrupper = norwegianFaker.helpers.arrayElements(undervisningsgrupperPool, { min: 1, max: 4 })
-		const kontaktlarergrupper = norwegianFaker.helpers.arrayElements(kontaktlarergrupperPool, { min: 1, max: 2 })
-		const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
-		elevforhold.hovedskole = false
-		schools[toSchoolIndex].skole.elevforhold.push(elevforhold)
-	}
+
+		const klasserPool: FintKlasse[] = []
+		for (let i = 0; i < config.numberOfKlasser; i++) {
+			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
+			klasserPool.push(generateKlasse(undervisningsforhold))
+		}
+
+		const undervisningsgrupperPool: FintUndervisningsgruppe[] = []
+		for (let i = 0; i < config.numberOfUndervisningsgrupper; i++) {
+			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
+			undervisningsgrupperPool.push(generateUndervisningsgruppe(undervisningsforhold))
+		}
+
+		const kontaktlarergrupperPool: FintKontaktlarergruppe[] = []
+		for (let i = 0; i < config.numberOfKontaktlarergrupper; i++) {
+			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
+			kontaktlarergrupperPool.push(generateKontaktlarergruppe(undervisningsforhold))
+		}
+
+		const elevforholdPool: FintElevforhold[] = []
+
+		const skoleelever = norwegianFaker.helpers.arrayElements(elevPool, { min: 3, max: elevPool.length })
+
+		if (schoolIndex > 0) {
+			// Check if any of the skoleelever are already assigned to a previous school
+			const alsoStudentAtPreviousSchool = skoleelever.find((elev) => {
+				return schools[schoolIndex - 1].skole.elevforhold.some((ef) => ef.elev.systemId.identifikatorverdi === elev.systemId.identifikatorverdi)
+			})
+			if (!alsoStudentAtPreviousSchool) {
+				logger.info(`Could not find cross-school-student. Adding cross-school student from ${schools[schoolIndex - 1].skole.navn} to ${schoolName}`)
+				// If not, add one to ensure at least one student is also at a previous school
+				skoleelever.push(norwegianFaker.helpers.arrayElement(schools[schoolIndex - 1].skole.elevforhold).elev)
+			} else {
+				logger.info(`Found cross-school-student for ${schoolName}`)
+			}
+		}
+
+		skoleelever.forEach((elev, elevIndex) => {
+			const klasse = norwegianFaker.helpers.arrayElements(klasserPool, { min: 1, max: 3 })
+			const undervisningsgrupper = norwegianFaker.helpers.arrayElements(undervisningsgrupperPool, { min: 1, max: 8 })
+			const kontaktlarergrupper = norwegianFaker.helpers.arrayElements(kontaktlarergrupperPool, { min: 1, max: 2 })
+			// Make sure we have some variants of all periods
+			if (elevIndex === 0) {
+				const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
+				elevforhold.gyldighetsperiode = validPeriod
+				elevforhold.klassemedlemskap[0].gyldighetsperiode = expiredPeriod
+				elevforhold.undervisningsgruppemedlemskap[0].gyldighetsperiode = futurePeriod
+				elevforholdPool.push(elevforhold)
+				return
+			}
+			if (elevIndex === 1) {
+				const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
+				elevforhold.gyldighetsperiode = expiredPeriod
+				elevforholdPool.push(elevforhold)
+				return
+			}
+			if (elevIndex === 2) {
+				const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
+				elevforhold.gyldighetsperiode = futurePeriod
+				elevforholdPool.push(elevforhold)
+				return
+			}
+			elevforholdPool.push(generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper))
+		})
+
+		schoolToAdd.skole.elevforhold = elevforholdPool
+
+		schools.push(schoolToAdd)
+	})
 
 	return schools
 }
