@@ -1,10 +1,10 @@
-import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppStudent, NewDbAppUser } from "./db.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "./shared-types.js"
 
 export interface IDbClient {
 	getStudents: () => Promise<DbAppStudent[]>
-	replaceStudents: (students: (DbAppStudent | NewDbAppStudent)[]) => Promise<void>
+	replaceStudents: (students: (DbAppStudent | NewAppStudent)[]) => Promise<void>
 	getUsers: () => Promise<DbAppUser[]>
-	replaceUsers: (users: (DbAppUser | NewDbAppUser)[]) => Promise<void>
+	replaceUsers: (users: (DbAppUser | NewAppUser)[]) => Promise<void>
 	getAccess: () => Promise<DbAccess[]>
-	replaceAccess: (accesses: (DbAccess | NewDbAccess)[]) => Promise<void>
+	replaceAccess: (accesses: (DbAccess | NewAccess)[]) => Promise<void>
 }

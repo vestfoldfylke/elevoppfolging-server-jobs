@@ -1,8 +1,8 @@
 import { logger } from "@vestfoldfylke/loglady"
 import { type Db, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppStudent, NewDbAppUser } from "../../types/db/db.js"
 import type { IDbClient } from "../../types/db/db-client.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
 	private readonly mongoClient: MongoClient
@@ -94,8 +94,8 @@ export class MongoDbClient implements IDbClient {
 		return db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).find().toArray()
 	}
 
-	async replaceStudents(students: (DbAppStudent | NewDbAppStudent)[]): Promise<void> {
-		await this.replaceCollection<DbAppStudent | NewDbAppStudent>(MONGODB.COLLECTIONS.STUDENTS, students)
+	async replaceStudents(students: (DbAppStudent | NewAppStudent)[]): Promise<void> {
+		await this.replaceCollection<DbAppStudent | NewAppStudent>(MONGODB.COLLECTIONS.STUDENTS, students)
 	}
 
 	async getUsers(): Promise<DbAppUser[]> {
@@ -103,8 +103,8 @@ export class MongoDbClient implements IDbClient {
 		return db.collection<DbAppUser>(MONGODB.COLLECTIONS.USERS).find().toArray()
 	}
 
-	async replaceUsers(users: (DbAppUser | NewDbAppUser)[]): Promise<void> {
-		await this.replaceCollection<DbAppUser | NewDbAppUser>(MONGODB.COLLECTIONS.USERS, users)
+	async replaceUsers(users: (DbAppUser | NewAppUser)[]): Promise<void> {
+		await this.replaceCollection<DbAppUser | NewAppUser>(MONGODB.COLLECTIONS.USERS, users)
 	}
 
 	async getAccess(): Promise<DbAccess[]> {
@@ -112,8 +112,8 @@ export class MongoDbClient implements IDbClient {
 		return db.collection<DbAccess>(MONGODB.COLLECTIONS.ACCESS).find().toArray()
 	}
 
-	async replaceAccess(accesses: (DbAccess | NewDbAccess)[]): Promise<void> {
-		await this.replaceCollection<DbAccess | NewDbAccess>(MONGODB.COLLECTIONS.ACCESS, accesses)
+	async replaceAccess(accesses: (DbAccess | NewAccess)[]): Promise<void> {
+		await this.replaceCollection<DbAccess | NewAccess>(MONGODB.COLLECTIONS.ACCESS, accesses)
 	}
 }
 

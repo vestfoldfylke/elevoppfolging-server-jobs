@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
-import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppStudent, NewDbAppUser } from "../../types/db/db.js"
 import type { IDbClient } from "../../types/db/db-client.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/shared-types.js"
 
 type MockDb = {
 	access: DbAccess[]
@@ -30,7 +30,7 @@ export class MockDbClient implements IDbClient {
 		return mockDb.students
 	}
 
-	async replaceStudents(students: (DbAppStudent | NewDbAppStudent)[]): Promise<void> {
+	async replaceStudents(students: (DbAppStudent | NewAppStudent)[]): Promise<void> {
 		students.forEach((student) => {
 			if (!("_id" in student)) {
 				;(student as DbAppStudent)._id = new ObjectId()
@@ -44,7 +44,7 @@ export class MockDbClient implements IDbClient {
 		return mockDb.users
 	}
 
-	async replaceUsers(users: (DbAppUser | NewDbAppUser)[]): Promise<void> {
+	async replaceUsers(users: (DbAppUser | NewAppUser)[]): Promise<void> {
 		users.forEach((user) => {
 			if (!("_id" in user)) {
 				;(user as DbAppUser)._id = new ObjectId()
@@ -58,7 +58,7 @@ export class MockDbClient implements IDbClient {
 		return mockDb.access
 	}
 
-	async replaceAccess(accesses: (DbAccess | NewDbAccess)[]): Promise<void> {
+	async replaceAccess(accesses: (DbAccess | NewAccess)[]): Promise<void> {
 		accesses.forEach((access) => {
 			if (!("_id" in access)) {
 				;(access as DbAccess)._id = new ObjectId()

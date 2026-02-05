@@ -4,11 +4,11 @@ import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewDbAccess, NewDbAppUser } from "../../src/types/db/db.js"
+import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppUser } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 
-const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewDbAppUser)[]): { valid: boolean; reason: string } => {
+const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
 	const user = users.find((user) => user.entra.id === access.entraUserId)
 	if (!user) return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
 
@@ -240,7 +240,6 @@ describe("sync-db-data/users-students-and-access", () => {
 				studentEnrollments: [
 					{
 						school: {
-							_id: "nope",
 							schoolNumber: "69",
 							name: "En skole som ikke skal brukes"
 						},
@@ -265,7 +264,6 @@ describe("sync-db-data/users-students-and-access", () => {
 				studentEnrollments: [
 					{
 						school: {
-							_id: "nope",
 							schoolNumber: "69",
 							name: "En skole som ikke skal brukes"
 						},
@@ -290,7 +288,6 @@ describe("sync-db-data/users-students-and-access", () => {
 				studentEnrollments: [
 					{
 						school: {
-							_id: "nope",
 							schoolNumber: "69",
 							name: "En skole som ikke skal brukes"
 						},
@@ -316,7 +313,6 @@ describe("sync-db-data/users-students-and-access", () => {
 					{
 						systemId: "elevforhold-som-skal-fjernes-2",
 						school: {
-							_id: "nope",
 							schoolNumber: "69",
 							name: "En skole som ikke skal brukes"
 						},

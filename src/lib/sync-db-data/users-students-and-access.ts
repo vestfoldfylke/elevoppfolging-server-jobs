@@ -10,16 +10,16 @@ import type {
 	DbAccess,
 	DbAppStudent,
 	DbAppUser,
-	NewDbAccess,
-	NewDbAppStudent,
-	NewDbAppUser,
+	NewAccess,
+	NewAppStudent,
+	NewAppUser,
 	Period,
 	School,
 	StudentEnrollment,
 	Teacher,
 	TeachingGroupAutoAccessEntry,
 	TeachingGroupMembership
-} from "../../types/db/db.js"
+} from "../../types/db/shared-types.js"
 import type {
 	FintElev,
 	FintElevforhold,
@@ -85,19 +85,19 @@ export const updateUsersStudentsAndAccess = (
 	currentAccess: DbAccess[],
 	fintSchoolsWithStudents: FintSchoolWithStudents[],
 	enterpriseApplicationUsers: User[]
-): { updatedAppUsers: (DbAppUser | NewDbAppUser)[]; updatedStudents: (DbAppStudent | NewDbAppStudent)[]; updatedAccess: (DbAccess | NewDbAccess)[] } => {
+): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[] } => {
 	const syncTimestamp: string = new Date().toISOString()
 
-	const updatedAppUsers: (DbAppUser | NewDbAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
+	const updatedAppUsers: (DbAppUser | NewAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
 
-	const updatedStudents: (DbAppStudent | NewDbAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
+	const updatedStudents: (DbAppStudent | NewAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
 	// wipe all previous student enrollments, and set all students to inactive
 	updatedStudents.forEach((student: DbAppStudent) => {
 		student.studentEnrollments = []
 		student.active = false
 	})
 
-	const updatedAccess: (DbAccess | NewDbAccess)[] = JSON.parse(JSON.stringify(currentAccess))
+	const updatedAccess: (DbAccess | NewAccess)[] = JSON.parse(JSON.stringify(currentAccess))
 	// wipe previous auto access
 	updatedAccess.forEach((access: DbAccess) => {
 		access.classes = access.classes.filter((entry) => entry.type !== "AUTOMATISK-KLASSE-TILGANG")
@@ -107,7 +107,7 @@ export const updateUsersStudentsAndAccess = (
 
 	// Internal helper/repack functions - don't need state, so no class for now
 	const upsertAppUser = (enterpriseApplicationUser: User) => {
-		let appUser: DbAppUser | NewDbAppUser | undefined = updatedAppUsers.find((user: DbAppUser | NewDbAppUser) => user.entra.id === enterpriseApplicationUser.id)
+		let appUser: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((user: DbAppUser | NewAppUser) => user.entra.id === enterpriseApplicationUser.id)
 		if (!appUser) {
 			if (
 				!enterpriseApplicationUser.id ||
@@ -141,7 +141,7 @@ export const updateUsersStudentsAndAccess = (
 		appUser.feideName = `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`
 	}
 
-	const addFintMockTeacherToAppUsers = (undervisningsforhold: FintUndervisningsforhold): NewDbAppUser => {
+	const addFintMockTeacherToAppUsers = (undervisningsforhold: FintUndervisningsforhold): NewAppUser => {
 		if (!MOCK_FINT) {
 			throw new Error("addFintMockUsersToAppUsers should only be called when MOCK_FINT is true")
 		}
@@ -153,7 +153,7 @@ export const updateUsersStudentsAndAccess = (
 		const firstName: string = undervisningsforhold.skoleressurs.person?.navn.fornavn || "Mock"
 		const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Mockesen"
 		// add to app users - and use inside repack, for now. Det er mock-lærere, så vi driter i å oppdatere navn osv.
-		const mockAppUser: NewDbAppUser = {
+		const mockAppUser: NewAppUser = {
 			feideName,
 			entra: {
 				id: `mock-${feideName}`,
@@ -167,8 +167,8 @@ export const updateUsersStudentsAndAccess = (
 		return mockAppUser
 	}
 
-	const findUserByFeideName = (feideName: string): DbAppUser | NewDbAppUser | null => {
-		const user: DbAppUser | NewDbAppUser | undefined = updatedAppUsers.find((appUser: DbAppUser | NewDbAppUser) => appUser.feideName?.toLowerCase() === feideName.toLowerCase())
+	const findUserByFeideName = (feideName: string): DbAppUser | NewAppUser | null => {
+		const user: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((appUser: DbAppUser | NewAppUser) => appUser.feideName?.toLowerCase() === feideName.toLowerCase())
 		return user || null
 	}
 
@@ -190,7 +190,7 @@ export const updateUsersStudentsAndAccess = (
 
 			let entraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
 			if (!entraUserId && MOCK_FINT) {
-				const newMockUser: NewDbAppUser = addFintMockTeacherToAppUsers(undervisningsforhold)
+				const newMockUser: NewAppUser = addFintMockTeacherToAppUsers(undervisningsforhold)
 				entraUserId = newMockUser.entra.id
 			}
 			return {
@@ -260,7 +260,6 @@ export const updateUsersStudentsAndAccess = (
 
 	const repackSchool = (skole: FintSkole): School => {
 		return {
-			_id: "whatever",
 			name: skole.navn,
 			schoolNumber: skole.skolenummer.identifikatorverdi
 		}
@@ -271,7 +270,7 @@ export const updateUsersStudentsAndAccess = (
 			logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
 			return
 		}
-		let teacherAccess: DbAccess | NewDbAccess | undefined = updatedAccess.find((access: DbAccess) => access.entraUserId === teacher.entraUserId)
+		let teacherAccess: DbAccess | NewAccess | undefined = updatedAccess.find((access: DbAccess) => access.entraUserId === teacher.entraUserId)
 		if (!teacherAccess) {
 			teacherAccess = {
 				entraUserId: teacher.entraUserId,
@@ -424,7 +423,7 @@ export const updateUsersStudentsAndAccess = (
 				}
 			}
 
-			let currentStudent: DbAppStudent | NewDbAppStudent | undefined = updatedStudents.find((student: DbAppStudent) => {
+			let currentStudent: DbAppStudent | NewAppStudent | undefined = updatedStudents.find((student: DbAppStudent) => {
 				return student.systemId === elev.systemId.identifikatorverdi || student.ssn === elev.person.fodselsnummer.identifikatorverdi
 			})
 			if (!currentStudent) {
