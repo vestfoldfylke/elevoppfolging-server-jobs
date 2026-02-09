@@ -22,3 +22,9 @@ export const MONGODB = {
 		DOCUMENTS: "documents"
 	}
 }
+
+if (!MOCK_ENTRA && !process.env.FRONTEND_APP_REGISTRATION_ID) {
+	throw new Error("FRONTEND_APP_REGISTRATION_ID must be set when not using MOCK_ENTRA")
+}
+
+export const FRONTEND_APP_REGISTRATION_ID = process.env.FRONTEND_APP_REGISTRATION_ID

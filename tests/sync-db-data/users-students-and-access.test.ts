@@ -151,7 +151,7 @@ describe("sync-db-data/users-students-and-access", () => {
 		numberOfKlasser: 5,
 		numberOfKontaktlarergrupper: 5,
 		numberOfUndervisningsgrupper: 5,
-		numberOfUndervisningsforhold: 5,
+		numberOfTeachers: 5,
 		numberOfStudents: 10,
 		schoolNames: ["School 1", "School 2"]
 	}

@@ -189,6 +189,7 @@ export const updateUsersStudentsAndAccess = (
 			const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Ukjent etternavn"
 
 			let entraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
+			// Bare fyll opp med appuserids til å begynne med - deretter kan du opprette mock brukere
 			if (!entraUserId && MOCK_FINT) {
 				const newMockUser: NewAppUser = addFintMockTeacherToAppUsers(undervisningsforhold)
 				entraUserId = newMockUser.entra.id

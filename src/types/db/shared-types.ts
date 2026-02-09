@@ -178,6 +178,23 @@ export type DbAppUser = NewAppUser & {
 	_id: ObjectId
 }
 
+// PROGRAM AREA
+export type NewProgramArea = {
+	name: string
+	classes: {
+		systemId: string
+		name: string
+	}[]
+}
+
+export type ProgramArea = NewProgramArea & {
+	_id: string
+}
+
+export type DbProgramArea = NewProgramArea & {
+	_id: ObjectId
+}
+
 // DOCUMENTS
 
 export type EditorData = {
@@ -214,14 +231,18 @@ export type DocumentUpdate = DocumentMessageBase & {
 	}
 }
 
-export type DocumentMessage = DocumentComment | DocumentUpdate
+export type NewDocumentMessage = DocumentComment | DocumentUpdate
+
+export type DocumentMessage = NewDocumentMessage & {
+	messageId: string
+}
 
 export type DocumentNote = DocumentBase & {
 	type: "NOTE"
 	content: {
 		text: string
 	}
-	messages: (DocumentComment | DocumentUpdate)[]
+	messages: DocumentMessage[]
 }
 
 export type DocumentFollowUp = DocumentBase & {
@@ -233,7 +254,7 @@ export type DocumentFollowUp = DocumentBase & {
 		}
 		text: string
 	}
-	messages: (DocumentComment | DocumentUpdate)[]
+	messages: DocumentMessage[]
 }
 
 type DocumentHelper = DocumentNote | DocumentFollowUp
@@ -244,6 +265,10 @@ export type NewStudentDocument = DocumentHelper & {
 	}
 }
 
-export type StudentDocument = DocumentHelper & {
+export type StudentDocument = NewStudentDocument & {
 	_id: string
+}
+
+export type DbStudentDocument = NewStudentDocument & {
+	_id: ObjectId
 }

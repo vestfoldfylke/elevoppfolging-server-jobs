@@ -14,7 +14,7 @@ const config: CodegenConfig = {
 			}
 		}
 	],
-	documents: ["./src/types/fint/queries/**/*.graphql"],
+	documents: ["./src/lib/fint/queries/**/*.graphql"],
 
 	generates: {
 		"./src/types/fint/fint-school-with-students.ts": {

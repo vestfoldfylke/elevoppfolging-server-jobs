@@ -8,6 +8,7 @@ import type {
 	FintKlasse,
 	FintKontaktlarergruppe,
 	FintSchoolWithStudents,
+	FintSkoleressurs,
 	FintUndervisningsforhold,
 	FintUndervisningsgruppe
 } from "../../types/fint/fint-school-with-students.js"
@@ -58,26 +59,30 @@ const generateUniqueName = (): UniqueName => {
 	return { firstName, lastName, feidePrefix }
 }
 
-const generateUndervisningsforhold = (): FintUndervisningsforhold => {
+const generateSkoleressurs = (): FintSkoleressurs => {
 	const uniqueName: UniqueName = generateUniqueName()
 	return {
 		systemId: {
 			identifikatorverdi: norwegianFaker.string.uuid()
 		},
-		skoleressurs: {
-			systemId: {
-				identifikatorverdi: norwegianFaker.string.uuid()
-			},
-			feidenavn: {
-				identifikatorverdi: `${uniqueName.feidePrefix}@fylke.no`
-			},
-			person: {
-				navn: {
-					fornavn: uniqueName.firstName,
-					etternavn: uniqueName.lastName
-				}
+		feidenavn: {
+			identifikatorverdi: `${uniqueName.feidePrefix}@fylke.no`
+		},
+		person: {
+			navn: {
+				fornavn: uniqueName.firstName,
+				etternavn: uniqueName.lastName
 			}
 		}
+	}
+}
+
+const generateUndervisningsforhold = (skoleressurs: FintSkoleressurs): FintUndervisningsforhold => {
+	return {
+		systemId: {
+			identifikatorverdi: norwegianFaker.string.uuid()
+		},
+		skoleressurs: skoleressurs
 	}
 }
 
@@ -195,7 +200,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 	if (config.numberOfStudents < config.schoolNames.length) {
 		throw new Error("Number of students must be at least equal to number of schools")
 	}
-	if (config.numberOfKlasser < 5 || config.numberOfKontaktlarergrupper < 5 || config.numberOfUndervisningsgrupper < 5 || config.numberOfUndervisningsforhold < 5 || config.numberOfStudents < 5) {
+	if (config.numberOfKlasser < 5 || config.numberOfKontaktlarergrupper < 5 || config.numberOfUndervisningsgrupper < 5 || config.numberOfTeachers < 5 || config.numberOfStudents < 5) {
 		throw new Error("All numeric configuration values must be at least 5")
 	}
 
@@ -204,29 +209,66 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 		elevPool.push(generateElev())
 	}
 
+	const elevOnEverySchool = generateElev()
+
+	logger.warn(
+		`This poor bastard should be attending every school: ${elevOnEverySchool.feidenavn?.identifikatorverdi} (${elevOnEverySchool.person.navn.fornavn} ${elevOnEverySchool.person.navn.etternavn})`
+	)
+
+	const skoleressursPool: FintSkoleressurs[] = []
+	for (let i = 0; i < config.numberOfTeachers; i++) {
+		skoleressursPool.push(generateSkoleressurs())
+	}
+
+	logger.warn(`This poor bastard should be working at every school: ${skoleressursPool[0].feidenavn?.identifikatorverdi}`)
+
 	const schools: FintSchoolWithStudents[] = []
 	config.schoolNames.forEach((schoolName, schoolIndex) => {
 		const schoolToAdd: FintSchoolWithStudents = generateSchool(schoolName)
 
 		const undervisningsforholdPool: FintUndervisningsforhold[] = []
-		for (let i = 0; i < config.numberOfUndervisningsforhold; i++) {
-			undervisningsforholdPool.push(generateUndervisningsforhold())
+		for (let i = 0; i < config.numberOfTeachers; i++) {
+			if (i === 0) {
+				// Ensure at least one skoleressurs is used multiple times
+				undervisningsforholdPool.push(generateUndervisningsforhold(skoleressursPool[0]))
+				continue
+			}
+			const skoleressurs = norwegianFaker.helpers.arrayElement(skoleressursPool)
+			undervisningsforholdPool.push(generateUndervisningsforhold(skoleressurs))
 		}
 
 		const klasserPool: FintKlasse[] = []
 		for (let i = 0; i < config.numberOfKlasser; i++) {
+			if (i === 0) {
+				// Ensure at least one undervisningsforhold is used multiple times
+				const undervisningsforhold = [undervisningsforholdPool[0]]
+				klasserPool.push(generateKlasse(undervisningsforhold))
+				continue
+			}
 			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
 			klasserPool.push(generateKlasse(undervisningsforhold))
 		}
 
 		const undervisningsgrupperPool: FintUndervisningsgruppe[] = []
 		for (let i = 0; i < config.numberOfUndervisningsgrupper; i++) {
+			// Ensure at least one undervisningsforhold is used multiple times
+			if (i === 0) {
+				const undervisningsforhold = [undervisningsforholdPool[0]]
+				undervisningsgrupperPool.push(generateUndervisningsgruppe(undervisningsforhold))
+				continue
+			}
 			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
 			undervisningsgrupperPool.push(generateUndervisningsgruppe(undervisningsforhold))
 		}
 
 		const kontaktlarergrupperPool: FintKontaktlarergruppe[] = []
 		for (let i = 0; i < config.numberOfKontaktlarergrupper; i++) {
+			// Ensure at least one undervisningsforhold is used multiple times
+			if (i === 0) {
+				const undervisningsforhold = [undervisningsforholdPool[0]]
+				kontaktlarergrupperPool.push(generateKontaktlarergruppe(undervisningsforhold))
+				continue
+			}
 			const undervisningsforhold = norwegianFaker.helpers.arrayElements(undervisningsforholdPool, { min: 1, max: 4 })
 			kontaktlarergrupperPool.push(generateKontaktlarergruppe(undervisningsforhold))
 		}
@@ -248,6 +290,8 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 				logger.info(`Found cross-school-student for ${schoolName}`)
 			}
 		}
+
+		elevforholdPool.push(generateElevforhold(elevOnEverySchool, [klasserPool[0]], [undervisningsgrupperPool[0]], [kontaktlarergrupperPool[0]]))
 
 		skoleelever.forEach((elev, elevIndex) => {
 			const klasse = norwegianFaker.helpers.arrayElements(klasserPool, { min: 1, max: 3 })
@@ -274,6 +318,12 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 				elevforholdPool.push(elevforhold)
 				return
 			}
+			// Make sure the poor teacher has at least one student in all schools
+			if (elevIndex === 3) {
+				const elevforhold = generateElevforhold(elev, [klasserPool[0]], [undervisningsgrupperPool[0]], [kontaktlarergrupperPool[0]])
+				elevforholdPool.push(elevforhold)
+				return
+			}
 			elevforholdPool.push(generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper))
 		})
 
@@ -284,3 +334,10 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 
 	return schools
 }
+
+/*
+
+- Når vi oppdaterer brukere - må vi plukke alle fra enterprise-appen og slenge de inn som brukere i basen.
+- Hvis MOCK, så kan vi også knytte opp enterprise brukerene (som har tilgang i mock) til noen random læere=
+
+*/

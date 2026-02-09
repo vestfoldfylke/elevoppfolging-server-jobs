@@ -43,25 +43,27 @@ export type FintGyldighetsPeriode = {
 	slutt?: string | null
 }
 
+export type FintSkoleressurs = {
+	systemId: {
+		identifikatorverdi: string
+	}
+	feidenavn?: {
+		identifikatorverdi: string
+	} | null
+	person?: {
+		navn: {
+			fornavn: string
+			mellomnavn?: string | null
+			etternavn: string
+		}
+	} | null
+}
+
 export type FintUndervisningsforhold = {
 	systemId: {
 		identifikatorverdi: string
 	}
-	skoleressurs: {
-		systemId: {
-			identifikatorverdi: string
-		}
-		feidenavn?: {
-			identifikatorverdi: string
-		} | null
-		person?: {
-			navn: {
-				fornavn: string
-				mellomnavn?: string | null
-				etternavn: string
-			}
-		} | null
-	}
+	skoleressurs: FintSkoleressurs
 }
 
 export type FintKlasse = {

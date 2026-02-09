@@ -4,5 +4,5 @@ export type GenerateMockFintSchoolsWithStudentsOptions = {
 	numberOfKlasser: number
 	numberOfUndervisningsgrupper: number
 	numberOfKontaktlarergrupper: number
-	numberOfUndervisningsforhold: number
+	numberOfTeachers: number
 }

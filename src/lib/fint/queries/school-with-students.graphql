@@ -25,24 +25,28 @@ fragment FintGyldighetsPeriode on Periode {
 	slutt
 }
 
+fragment FintSkoleressurs on Skoleressurs {
+	systemId {
+		identifikatorverdi
+	}
+	feidenavn {
+		identifikatorverdi
+	}
+	person {
+		navn {
+			fornavn
+			mellomnavn
+			etternavn
+		}
+	}
+}
+
 fragment FintUndervisningsforhold on Undervisningsforhold {
 	systemId {
 		identifikatorverdi
 	}
 	skoleressurs {
-		systemId {
-			identifikatorverdi
-		}
-		feidenavn {
-			identifikatorverdi
-		}
-		person {
-			navn {
-				fornavn
-				mellomnavn
-				etternavn
-			}
-		}
+		...FintSkoleressurs
 	}
 }
 

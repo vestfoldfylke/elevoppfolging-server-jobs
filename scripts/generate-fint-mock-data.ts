@@ -9,7 +9,7 @@ const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudent
 	numberOfKlasser: 250,
 	numberOfKontaktlarergrupper: 100,
 	numberOfUndervisningsgrupper: 600,
-	numberOfUndervisningsforhold: 2000,
+	numberOfTeachers: 2000,
 	numberOfStudents: 10000,
 	schoolNames: ["Mordor VGS", "Hobbitun VGS", "Gondor VGS"]
 })
