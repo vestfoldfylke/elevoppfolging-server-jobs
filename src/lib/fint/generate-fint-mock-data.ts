@@ -104,7 +104,7 @@ const generateKlasse = (undervisningsforhold: FintUndervisningsforhold[]): FintK
 const generateUndervisningsgruppe = (undervisningsforhold: FintUndervisningsforhold[]): FintUndervisningsgruppe => {
 	const trinn: number = norwegianFaker.number.int({ min: 1, max: 2000 })
 	return {
-		navn: `${norwegianFaker.helpers.arrayElement(["MATTE", "NORSK", "TUT", "HAH", "JAU", "SUP"])}${trinn}`,
+		navn: `${norwegianFaker.helpers.arrayElement(["MAT", "NOR", "SAMF", "GYM", "GEO", "LØK"])}${trinn}`,
 		systemId: {
 			identifikatorverdi: norwegianFaker.string.uuid()
 		},
