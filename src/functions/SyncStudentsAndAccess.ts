@@ -1,4 +1,4 @@
-import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from "@azure/functions"
+import { app, type HttpResponseInit } from "@azure/functions"
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
 import { getDbClient } from "../lib/db/get-db-client.js"
