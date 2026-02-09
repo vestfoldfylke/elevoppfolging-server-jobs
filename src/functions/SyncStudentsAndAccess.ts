@@ -11,9 +11,7 @@ import type { IFintClient } from "../types/fint/fint-client.js"
 import type { FintSkoleInfo } from "../types/fint/fint-school.js"
 import type { FintSchoolWithStudents } from "../types/fint/fint-school-with-students.js"
 
-export async function SyncUsersAndStudents(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-	context.log(`Http function processed request for url "${request.url}"`)
-
+export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
 	const fintClient: IFintClient = getFintClient()
 	const entraClient: IEntraClient = getEntraClient()
 	const dbClient: IDbClient = getDbClient()
