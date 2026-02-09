@@ -86,10 +86,12 @@ const generateUndervisningsforhold = (skoleressurs: FintSkoleressurs): FintUnder
 	}
 }
 
+const classGroupNames = ["BAB", "STB", "TUT", "HAH", "JAU", "SUP"]
+
 const generateKlasse = (undervisningsforhold: FintUndervisningsforhold[]): FintKlasse => {
 	const trinn: number = norwegianFaker.number.int({ min: 1, max: 2000 })
 	return {
-		navn: `${trinn}${norwegianFaker.helpers.arrayElement(["BAB", "STB", "TUT", "HAH", "JAU", "SUP"])}`,
+		navn: `${trinn}${norwegianFaker.helpers.arrayElement(classGroupNames)}`,
 		systemId: {
 			identifikatorverdi: norwegianFaker.string.uuid()
 		},
@@ -115,7 +117,7 @@ const generateUndervisningsgruppe = (undervisningsforhold: FintUndervisningsforh
 const generateKontaktlarergruppe = (undervisningsforhold: FintUndervisningsforhold[]): FintKontaktlarergruppe => {
 	const trinn: number = norwegianFaker.number.int({ min: 1, max: 2000 })
 	return {
-		navn: `${trinn}${norwegianFaker.helpers.arrayElement(["BAB", "STB", "TUT", "HAH", "JAU", "SUP"])}`,
+		navn: `${trinn}${norwegianFaker.helpers.arrayElement(classGroupNames)}`,
 		systemId: {
 			identifikatorverdi: norwegianFaker.string.uuid()
 		},
