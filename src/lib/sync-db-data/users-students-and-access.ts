@@ -355,7 +355,7 @@ export const updateUsersStudentsAndAccess = (
 	updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
 		if (!enterpriseApplicationUsers.some((enterpriseApplicationUser: User) => enterpriseApplicationUser.id === appUser.entra.id)) {
 			appUser.active = false
-			logger.info("Settet app-bruker {DisplayName} til inactive, da den ikke lenger finnes i EntraID", appUser.entra.displayName)
+			logger.info("Setter app-bruker {DisplayName} til inactive, da den ikke lenger finnes i EntraID", appUser.entra.displayName)
 		}
 	})
 	logger.info("Synket ferdig litt entrabrukere")
