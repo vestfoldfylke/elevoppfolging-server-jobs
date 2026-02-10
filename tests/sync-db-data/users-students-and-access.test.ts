@@ -76,13 +76,16 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
 	for (const enrollment of student.studentEnrollments) {
 		const school = schoolsWithStudents.find((s) => s.skole.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
 		if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
+
 		const enrollmentInFint = school.skole.elevforhold.find((ef) => ef.systemId.identifikatorverdi === enrollment.systemId)
 		if (!enrollmentInFint) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
 		if (enrollmentInFint.elev.feidenavn.identifikatorverdi !== student.feideName) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
 		if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
 		if (enrollmentInFint.elev.elevnummer.identifikatorverdi !== student.studentNumber) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
+
 		const repackedPeriode = repackPeriode(enrollmentInFint.gyldighetsperiode)
 		if (repackedPeriode.active !== enrollment.period.active) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched active status` }
+
 		const allClassesPresent = enrollmentInFint.klassemedlemskap.every((km) => {
 			return enrollment.classMemberships.some((cm) => cm.systemId === km.systemId.identifikatorverdi)
 		})
@@ -96,6 +99,60 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
 		})
 		if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
 	}
+
+	const mainEnrollmentInFint = student.mainSchool
+		? schoolsWithStudents
+				.find((school) => school.skole?.skolenummer.identifikatorverdi === student.mainSchool?.schoolNumber)
+				?.skole.elevforhold.find((ef) => ef.systemId.identifikatorverdi === student.mainSchool?.enrollmentSystemId && repackPeriode(ef.gyldighetsperiode).active)
+		: null
+	if (!mainEnrollmentInFint) {
+		if (student.mainSchool || student.mainClass || student.mainContactTeacherGroup) {
+			return { valid: false, reason: `Main school specified for student but corresponding enrollment not found in FINT data` }
+		}
+		return { valid: true, reason: "" }
+	}
+
+	if (mainEnrollmentInFint.systemId.identifikatorverdi !== student.mainSchool?.enrollmentSystemId) {
+		return {
+			valid: false,
+			reason: `FINT Main school elevforhold systemId (${mainEnrollmentInFint.systemId.identifikatorverdi}) not equal to apps student main school enrollmentSystemId ${student.mainSchool?.enrollmentSystemId}`
+		}
+	}
+
+	if (student.mainClass) {
+		const mainClassMembershipInFint = mainEnrollmentInFint.klassemedlemskap.find((km) => km.klasse.systemId.identifikatorverdi === student.mainClass?.systemId)
+		if (!mainClassMembershipInFint) {
+			return {
+				valid: false,
+				reason: `Main class specified for student (mainClass.systemId=${student.mainClass?.systemId}) but corresponding class membership not found in FINT data (mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
+			}
+		}
+		if (repackPeriode(mainClassMembershipInFint.gyldighetsperiode).active !== repackPeriode(mainEnrollmentInFint.gyldighetsperiode).active) {
+			return {
+				valid: false,
+				reason: `Main class membership active status does not match main enrollment active status (mainClass.systemId=${student.mainClass?.systemId}, mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
+			}
+		}
+	}
+
+	if (student.mainContactTeacherGroup) {
+		const mainContactTeacherGroupMembershipInFint = mainEnrollmentInFint.kontaktlarergruppemedlemskap.find(
+			(cgm) => cgm.kontaktlarergruppe.systemId.identifikatorverdi === student.mainContactTeacherGroup?.systemId
+		)
+		if (!mainContactTeacherGroupMembershipInFint) {
+			return {
+				valid: false,
+				reason: `Main contact teacher group specified for student (mainContactTeacherGroup.systemId=${student.mainContactTeacherGroup?.systemId}) but corresponding contact teacher group membership not found in FINT data (mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
+			}
+		}
+		if (repackPeriode(mainContactTeacherGroupMembershipInFint.gyldighetsperiode).active !== repackPeriode(mainEnrollmentInFint.gyldighetsperiode).active) {
+			return {
+				valid: false,
+				reason: `Main contact teacher group membership active status does not match main enrollment active status (mainContactTeacherGroup.systemId=${student.mainContactTeacherGroup?.systemId}, mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
+			}
+		}
+	}
+
 	return { valid: true, reason: "" }
 }
 
@@ -239,6 +296,9 @@ describe("sync-db-data/users-students-and-access", () => {
 				name: "Et navn som skal oppdateres",
 				lastSynced: "samma driten",
 				ssn: studentNameUpdate.person.fodselsnummer.identifikatorverdi,
+				mainSchool: null,
+				mainClass: null,
+				mainContactTeacherGroup: null,
 				studentEnrollments: [
 					{
 						school: {
@@ -263,6 +323,9 @@ describe("sync-db-data/users-students-and-access", () => {
 				name: "Et navn som skal oppdateres",
 				lastSynced: "samma driten",
 				ssn: "oppdater meg",
+				mainSchool: null,
+				mainClass: null,
+				mainContactTeacherGroup: null,
 				studentEnrollments: [
 					{
 						school: {
@@ -287,6 +350,9 @@ describe("sync-db-data/users-students-and-access", () => {
 				name: "Et navn som skal oppdateres",
 				lastSynced: "samma driten",
 				ssn: studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi,
+				mainSchool: null,
+				mainClass: null,
+				mainContactTeacherGroup: null,
 				studentEnrollments: [
 					{
 						school: {
@@ -311,6 +377,9 @@ describe("sync-db-data/users-students-and-access", () => {
 				name: "Et navn som ikke skal oppdateres",
 				lastSynced: "samma driten",
 				ssn: "12345678911",
+				mainSchool: null,
+				mainClass: null,
+				mainContactTeacherGroup: null,
 				studentEnrollments: [
 					{
 						systemId: "elevforhold-som-skal-fjernes-2",
