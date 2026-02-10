@@ -2,6 +2,7 @@ import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
+import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
 import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppUser } from "../../src/types/db/shared-types.js"
@@ -182,11 +183,12 @@ describe("sync-db-data/users-students-and-access", () => {
 		})
 	})
 
-	describe("data is mapped and updated correctly when previous data is present", () => {
-		const existingUserId = new ObjectId()
+	describe("data is mapped and updated correctly when previous data is present", async () => {
+		const existingUserIdThatShouldBeInactive = new ObjectId()
 		const currentUsers: DbAppUser[] = [
 			{
-				_id: existingUserId,
+				_id: existingUserIdThatShouldBeInactive,
+				active: true,
 				entra: {
 					id: "existing-user-id",
 					companyName: "Existing Company",
@@ -395,7 +397,10 @@ describe("sync-db-data/users-students-and-access", () => {
 			}
 		]
 
-		const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools, [])
+		const mockEntraClient = getEntraClient()
+		const mockEntraUsers = await mockEntraClient.getEnterpriseApplicationUsers()
+
+		const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools, mockEntraUsers)
 		writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
 		it("should create students without duplicates", () => {
@@ -469,10 +474,31 @@ describe("sync-db-data/users-students-and-access", () => {
 				"Expected old automatic contact teacher group access to be removed"
 			)
 		})
+
 		it("should create valid students", () => {
 			for (const student of result.updatedStudents) {
 				const validation = studentIsValid(student as DbAppStudent, mockSchools)
 				assert(validation.valid, `Student validation failed: ${validation.reason}`)
+			}
+		})
+
+		it("Should set active to false for users that are no longer active in Entra", () => {
+			const inactiveUser: DbAppUser | NewAppUser = result.updatedAppUsers.find((user) => {
+				return "_id" in user && user._id.toString() === existingUserIdThatShouldBeInactive.toString()
+			})
+			assert(inactiveUser, "Inactive user not found")
+			assert(inactiveUser.active === false, `Expected user to be inactive, got active=${inactiveUser.active}`)
+		})
+
+		it("Should link existing Entra users to MOCK FINT teachers, and set feidename for AppUser based on linked teacher", async () => {
+			for (const entraUser of mockEntraUsers) {
+				const user = result.updatedAppUsers.find((appUser) => appUser.entra.id === entraUser.id)
+				assert(user, `Expected to find user with Entra ID ${entraUser.id}, but not found`)
+				assert(user.active === true, `Expected user with Entra ID ${entraUser.id} to be active, got active=${user.active}`)
+				assert(
+					entraUser.onPremisesSamAccountName && !user.feideName.startsWith(entraUser.onPremisesSamAccountName),
+					`Expected feideName for user with Entra ID ${entraUser.id} to be updated with a random MOCK-teachers feidenavn, got feideName=${user.feideName} and onPremisesSamAccountName=${entraUser.onPremisesSamAccountName}`
+				)
 			}
 		})
 	})

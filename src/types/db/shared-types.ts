@@ -160,6 +160,7 @@ export type DbAccess = NewAccess & {
 }
 
 export type NewAppUser = {
+	active: boolean
 	feideName: string
 	entra: {
 		id: string
