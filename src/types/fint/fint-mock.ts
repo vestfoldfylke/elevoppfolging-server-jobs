@@ -1,0 +1,8 @@
+export type GenerateMockFintSchoolsWithStudentsOptions = {
+	schoolNames: string[]
+	numberOfStudents: number
+	numberOfKlasser: number
+	numberOfUndervisningsgrupper: number
+	numberOfKontaktlarergrupper: number
+	numberOfTeachers: number
+}
