@@ -475,12 +475,16 @@ export const updateUsersStudentsAndAccess = (
 					ssn: elev.person.fodselsnummer.identifikatorverdi,
 					name: `${elev.person.navn.fornavn} ${elev.person.navn.mellomnavn ? `${elev.person.navn.mellomnavn} ` : ""}${elev.person.navn.etternavn}`,
 					studentEnrollments: [],
+					mainSchool: null,
+					mainClass: null,
+					mainContactTeacherGroup: null,
 					lastSynced: syncTimestamp
 				}
 				updatedStudents.push(currentStudent)
 			} else {
-				// Set ObjectId again (JSON.parse/stringify removes it)
-				;(currentStudent as DbAppStudent)._id = new ObjectId((currentStudent as DbAppStudent)._id)
+				if ("_id" in currentStudent) {
+					currentStudent._id = new ObjectId(currentStudent._id) // Set ObjectId for existing students (JSON.parse/stringify removes it)
+				}
 				// Update basic student data in case of changes
 				currentStudent.systemId = elev.systemId.identifikatorverdi // Obs, skal vi gjøre dette?
 				currentStudent.ssn = elev.person.fodselsnummer.identifikatorverdi // Ja, dette skal vi gjøre
@@ -489,13 +493,50 @@ export const updateUsersStudentsAndAccess = (
 				currentStudent.ssn = elev.person.fodselsnummer.identifikatorverdi
 				currentStudent.studentNumber = elev.elevnummer.identifikatorverdi
 				currentStudent.lastSynced = syncTimestamp
+				// Add some props if missing
+				currentStudent.studentEnrollments ??= []
+				currentStudent.mainClass ??= null
+				currentStudent.mainSchool ??= null
+				currentStudent.mainContactTeacherGroup ??= null
 			}
 
 			currentStudent.studentEnrollments.push(studentEnrollment)
-			// Set student active status based on at least one active enrollment
-			currentStudent.active = currentStudent.studentEnrollments.some((enrollment) => enrollment.period.active)
 		}
 	}
+
+	logger.info("Ferdig med å mappe elever og tilganger basert på FINT-data - finner og setter main*-props for hver elev")
+	// Etter at all mapping er gjort, så går vi gjennom alle elever og setter main*-props basert på prioritert logikk
+	updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
+		if (student.studentEnrollments.length === 0) {
+			return
+		}
+		// Set student active status based on at least one active enrollment
+		student.active = student.studentEnrollments.some((enrollment) => enrollment.period.active)
+		if (!student.active) {
+			return
+		}
+		const mainEnrollment = student.studentEnrollments.find((enrollment) => enrollment.mainSchool && enrollment.period.active)
+		if (!mainEnrollment) {
+			logger.warn("Fant ingen main school for elev {studentName} {feideName} med aktive elevforhold", student.name, student.feideName)
+			return
+		}
+		student.mainSchool = {
+			...mainEnrollment.school,
+			enrollmentSystemId: mainEnrollment.systemId
+		}
+		const mainClassMembership = mainEnrollment.classMemberships.find((cm) => cm.period.active)
+		if (mainClassMembership) {
+			student.mainClass = {
+				name: mainClassMembership.classGroup.name,
+				systemId: mainClassMembership.classGroup.systemId
+			}
+		}
+		const mainContactTeacherGroupMembership = mainEnrollment.contactTeacherGroupMemberships.find((ctgm) => ctgm.period.active)
+		if (mainContactTeacherGroupMembership) {
+			student.mainContactTeacherGroup = mainContactTeacherGroupMembership.contactTeacherGroup
+		}
+	})
+
 	logger.info("Ferdig med synk av elever og tilganger basert på FINT-data")
 	return {
 		updatedAppUsers,
