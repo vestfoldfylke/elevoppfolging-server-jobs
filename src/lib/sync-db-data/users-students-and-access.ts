@@ -89,6 +89,7 @@ export const updateUsersStudentsAndAccess = (
 	const syncTimestamp: string = new Date().toISOString()
 
 	const updatedAppUsers: (DbAppUser | NewAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
+	const linkedMockUsers: Record<string, boolean> = {}
 
 	const updatedStudents: (DbAppStudent | NewAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
 	// wipe all previous student enrollments, and set all students to inactive
@@ -121,6 +122,7 @@ export const updateUsersStudentsAndAccess = (
 			}
 			logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
 			appUser = {
+				active: Boolean(enterpriseApplicationUser.accountEnabled),
 				feideName: `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`,
 				entra: {
 					id: enterpriseApplicationUser.id,
@@ -134,11 +136,22 @@ export const updateUsersStudentsAndAccess = (
 			return
 		}
 		// Update existing user info
-		appUser.entra.userPrincipalName = enterpriseApplicationUser.userPrincipalName
-		appUser.entra.displayName = enterpriseApplicationUser.displayName
-		appUser.entra.companyName = enterpriseApplicationUser.companyName
-		appUser.entra.department = enterpriseApplicationUser.department
-		appUser.feideName = `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`
+		if (enterpriseApplicationUser.userPrincipalName) {
+			appUser.entra.userPrincipalName = enterpriseApplicationUser.userPrincipalName
+		}
+		if (enterpriseApplicationUser.displayName) {
+			appUser.entra.displayName = enterpriseApplicationUser.displayName
+		}
+		if (enterpriseApplicationUser.companyName) {
+			appUser.entra.companyName = enterpriseApplicationUser.companyName
+		}
+		if (enterpriseApplicationUser.department) {
+			appUser.entra.department = enterpriseApplicationUser.department
+		}
+		if (enterpriseApplicationUser.onPremisesSamAccountName) {
+			appUser.feideName = `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`
+		}
+		appUser.active = Boolean(enterpriseApplicationUser.accountEnabled)
 	}
 
 	const addFintMockTeacherToAppUsers = (undervisningsforhold: FintUndervisningsforhold): NewAppUser => {
@@ -155,6 +168,7 @@ export const updateUsersStudentsAndAccess = (
 		// add to app users - and use inside repack, for now. Det er mock-lærere, så vi driter i å oppdatere navn osv.
 		const mockAppUser: NewAppUser = {
 			feideName,
+			active: true,
 			entra: {
 				id: `mock-${feideName}`,
 				userPrincipalName: feideName,
@@ -191,6 +205,24 @@ export const updateUsersStudentsAndAccess = (
 			let entraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
 			// Bare fyll opp med appuserids til å begynne med - deretter kan du opprette mock brukere
 			if (!entraUserId && MOCK_FINT) {
+				// Hvis det er noen entra app-users som ikke har fått seg en lærer-knytning, så knytter vi opp denne læreren til en app-user. Hvis ikke kan vi bare legge den til som mock-app-user
+				const userToLink = updatedAppUsers.find(
+					(appUser: DbAppUser | NewAppUser) => !linkedMockUsers[appUser.entra.id] && appUser.active && enterpriseApplicationUsers.some((entraUser) => entraUser.id === appUser.entra.id)
+				)
+				if (userToLink) {
+					logger.warn("Har flere app-brukere å linke opp i MOCK - linker opp denne læreren {TeacherName} til app-bruker {DisplayName}", `${firstName} ${lastName}`, userToLink.entra.displayName)
+					userToLink.feideName = feideName
+
+					linkedMockUsers[userToLink.entra.id] = true
+
+					return {
+						entraUserId: userToLink.entra.id,
+						feideName: feideName,
+						name: `${firstName} ${lastName}`,
+						systemId: undervisningsforhold.skoleressurs.systemId.identifikatorverdi
+					}
+				}
+
 				const newMockUser: NewAppUser = addFintMockTeacherToAppUsers(undervisningsforhold)
 				entraUserId = newMockUser.entra.id
 			}
@@ -318,6 +350,13 @@ export const updateUsersStudentsAndAccess = (
 	logger.info("Synker litt entrabrukere")
 	enterpriseApplicationUsers.forEach((enterpriseApplicationUser: User) => {
 		upsertAppUser(enterpriseApplicationUser)
+	})
+	logger.info("Setter alle brukere som ikke finnes i enterprise-app til inactive")
+	updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
+		if (!enterpriseApplicationUsers.some((enterpriseApplicationUser: User) => enterpriseApplicationUser.id === appUser.entra.id)) {
+			appUser.active = false
+			logger.info("Setter app-bruker {DisplayName} til inactive, da den ikke lenger finnes i EntraID", appUser.entra.displayName)
+		}
 	})
 	logger.info("Synket ferdig litt entrabrukere")
 

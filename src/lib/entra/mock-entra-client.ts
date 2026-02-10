@@ -6,14 +6,21 @@ export class MockEntraClient implements IEntraClient {
 		return [
 			{
 				id: "1",
+				accountEnabled: true,
 				companyName: "kbdfj",
 				displayName: "sorgi",
-				onPremisesSamAccountName: "we",
+				onPremisesSamAccountName: "jeg-skal-bli-oppdatert",
 				mail: "fg",
-				onPremisesExtensionAttributes: {
-					extensionAttribute9: "erg"
-				},
 				userPrincipalName: "rty"
+			},
+			{
+				id: "2",
+				accountEnabled: true,
+				companyName: "kbdfj",
+				displayName: "dorgi",
+				onPremisesSamAccountName: "jeg-skal-bli-oppdatert-også",
+				mail: "fg",
+				userPrincipalName: "etannetupn"
 			}
 		]
 	}

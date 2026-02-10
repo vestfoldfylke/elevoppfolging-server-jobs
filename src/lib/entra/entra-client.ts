@@ -73,18 +73,10 @@ export class EntraClient implements IEntraClient {
 	}
 
 	private async getGroupMembers(groupId: string): Promise<User[]> {
-		return await this.graphGet<User[]>(`groups/${groupId}/members`)
+		return await this.graphGet<User[]>(`groups/${groupId}/members?$select=id,userPrincipalName,displayName,companyName,department,company,onPremisesSamAccountName,accountEnabled`)
 	}
 
 	async getEnterpriseApplicationUsers(): Promise<User[]> {
-		/*
-		Hent frontend appen (enterprise)
-		Hent alle grupper som er assignet appen
-		Hent alle brukere i gruppene
-		Pass på at ikke det er duplikater, da en bruker kan være i flere grupper
-		Returner alle brukere som graph user - kjempefintt!
-		*/
-
 		const appRoleAssignments: AppRoleAssignment[] = await this.getEnterpriseAppAssignments(FRONTEND_APP_REGISTRATION_ID)
 
 		const groupAssignments = appRoleAssignments.filter((assignment) => assignment.principalType === "Group")
