@@ -1,160 +1,160 @@
 fragment FintElev on Elev {
-	systemId {
-		identifikatorverdi
-	}
-	feidenavn {
-		identifikatorverdi
-	}
-	elevnummer {
-		identifikatorverdi
-	}
-	person {
-		fodselsnummer {
-			identifikatorverdi
-		}
-		navn {
-			fornavn
-			mellomnavn
-			etternavn
-		}
-	}
+  systemId {
+    identifikatorverdi
+  }
+  feidenavn {
+    identifikatorverdi
+  }
+  elevnummer {
+    identifikatorverdi
+  }
+  person {
+    fodselsnummer {
+      identifikatorverdi
+    }
+    navn {
+      fornavn
+      mellomnavn
+      etternavn
+    }
+  }
 }
 
 fragment FintGyldighetsPeriode on Periode {
-	start
-	slutt
+  start
+  slutt
 }
 
 fragment FintSkoleressurs on Skoleressurs {
-	systemId {
-		identifikatorverdi
-	}
-	feidenavn {
-		identifikatorverdi
-	}
-	person {
-		navn {
-			fornavn
-			mellomnavn
-			etternavn
-		}
-	}
+  systemId {
+    identifikatorverdi
+  }
+  feidenavn {
+    identifikatorverdi
+  }
+  person {
+    navn {
+      fornavn
+      mellomnavn
+      etternavn
+    }
+  }
 }
 
 fragment FintUndervisningsforhold on Undervisningsforhold {
-	systemId {
-		identifikatorverdi
-	}
-	skoleressurs {
-		...FintSkoleressurs
-	}
+  systemId {
+    identifikatorverdi
+  }
+  skoleressurs {
+    ...FintSkoleressurs
+  }
 }
 
 fragment FintKlasse on Klasse {
-	navn
-	systemId {
-		identifikatorverdi
-	}
-	trinn {
-		navn
-		grepreferanse
-	}
-	undervisningsforhold {
-		...FintUndervisningsforhold
-	}
+  navn
+  systemId {
+    identifikatorverdi
+  }
+  trinn {
+    navn
+    grepreferanse
+  }
+  undervisningsforhold {
+    ...FintUndervisningsforhold
+  }
 }
 
 fragment FintKlassemedlemskap on Klassemedlemskap {
-	systemId {
-		identifikatorverdi
-	}
-	gyldighetsperiode {
-		...FintGyldighetsPeriode
-	}
-	klasse {
-		...FintKlasse
-	}
+  systemId {
+    identifikatorverdi
+  }
+  gyldighetsperiode {
+    ...FintGyldighetsPeriode
+  }
+  klasse {
+    ...FintKlasse
+  }
 }
 
 fragment FintUndervisningsgruppe on Undervisningsgruppe {
-	navn
-	systemId {
-		identifikatorverdi
-	}
-	undervisningsforhold {
-		...FintUndervisningsforhold
-	}
+  navn
+  systemId {
+    identifikatorverdi
+  }
+  undervisningsforhold {
+    ...FintUndervisningsforhold
+  }
 }
 
 fragment FintUndervisningsgruppemedlemskap on Undervisningsgruppemedlemskap {
-	systemId {
-		identifikatorverdi
-	}
-	gyldighetsperiode {
-		...FintGyldighetsPeriode
-	}
-	undervisningsgruppe {
-		...FintUndervisningsgruppe
-	}
+  systemId {
+    identifikatorverdi
+  }
+  gyldighetsperiode {
+    ...FintGyldighetsPeriode
+  }
+  undervisningsgruppe {
+    ...FintUndervisningsgruppe
+  }
 }
 
 fragment FintKontaktlarergruppe on Kontaktlarergruppe {
-	navn
-	systemId {
-		identifikatorverdi
-	}
-	undervisningsforhold {
-		...FintUndervisningsforhold
-	}
+  navn
+  systemId {
+    identifikatorverdi
+  }
+  undervisningsforhold {
+    ...FintUndervisningsforhold
+  }
 }
 
 fragment FintKontaktlarergruppemedlemskap on Kontaktlarergruppemedlemskap {
-	systemId {
-		identifikatorverdi
-	}
-	gyldighetsperiode {
-		...FintGyldighetsPeriode
-	}
-	kontaktlarergruppe {
-		...FintKontaktlarergruppe
-	}
+  systemId {
+    identifikatorverdi
+  }
+  gyldighetsperiode {
+    ...FintGyldighetsPeriode
+  }
+  kontaktlarergruppe {
+    ...FintKontaktlarergruppe
+  }
 }
 
 fragment FintElevforhold on Elevforhold {
-	systemId {
-		identifikatorverdi
-	}
-	gyldighetsperiode {
-		start
-		slutt
-	}
-	elev {
-		...FintElev
-	}
-	hovedskole
-	klassemedlemskap {
-		...FintKlassemedlemskap
-	}
-	undervisningsgruppemedlemskap {
-		...FintUndervisningsgruppemedlemskap
-	}
-	kontaktlarergruppemedlemskap {
-		...FintKontaktlarergruppemedlemskap
-	}
+  systemId {
+    identifikatorverdi
+  }
+  gyldighetsperiode {
+    start
+    slutt
+  }
+  elev {
+    ...FintElev
+  }
+  hovedskole
+  klassemedlemskap {
+    ...FintKlassemedlemskap
+  }
+  undervisningsgruppemedlemskap {
+    ...FintUndervisningsgruppemedlemskap
+  }
+  kontaktlarergruppemedlemskap {
+    ...FintKontaktlarergruppemedlemskap
+  }
 }
 
 fragment FintSkole on Skole {
-	skolenummer {
-		identifikatorverdi
-	}
-	navn
-	elevforhold {
-		...FintElevforhold
-	}
+  skolenummer {
+    identifikatorverdi
+  }
+  navn
+  elevforhold {
+    ...FintElevforhold
+  }
 }
 
 query FintSchoolWithStudents($schoolNumber: String!) {
-	skole(skolenummer: $schoolNumber) {
-		...FintSkole
-	}
+  skole(skolenummer: $schoolNumber) {
+    ...FintSkole
+  }
 }

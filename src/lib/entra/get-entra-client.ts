@@ -6,9 +6,9 @@ import { MockEntraClient } from "./mock-entra-client.js"
 let entraClient: IEntraClient
 
 if (MOCK_ENTRA) {
-	entraClient = new MockEntraClient()
+  entraClient = new MockEntraClient()
 } else {
-	entraClient = new EntraClient()
+  entraClient = new EntraClient()
 }
 
 export const getEntraClient = (): IEntraClient => entraClient
