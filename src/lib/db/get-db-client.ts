@@ -6,9 +6,9 @@ import { MongoDbClient } from "./mongodb-client.js"
 let dbClient: IDbClient
 
 if (MOCK_DB) {
-	dbClient = new MockDbClient()
+  dbClient = new MockDbClient()
 } else {
-	dbClient = new MongoDbClient()
+  dbClient = new MongoDbClient()
 }
 
 export const getDbClient = (): IDbClient => dbClient

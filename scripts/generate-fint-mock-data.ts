@@ -6,17 +6,17 @@ import type { FintSchoolWithStudents } from "../src/types/fint/fint-school-with-
 logger.info("Generating mock FINT schools with students...")
 
 const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents({
-	numberOfKlasser: 250,
-	numberOfKontaktlarergrupper: 100,
-	numberOfUndervisningsgrupper: 600,
-	numberOfTeachers: 2000,
-	numberOfStudents: 10000,
-	schoolNames: ["Mordor VGS", "Hobbitun VGS", "Gondor VGS"]
+  numberOfKlasser: 250,
+  numberOfKontaktlarergrupper: 100,
+  numberOfUndervisningsgrupper: 600,
+  numberOfTeachers: 2000,
+  numberOfStudents: 10000,
+  schoolNames: ["Mordor VGS", "Hobbitun VGS", "Gondor VGS"]
 })
 
 if (!existsSync("./mock-data")) {
-	logger.info("Creating mock-data directory...")
-	mkdirSync("./mock-data")
+  logger.info("Creating mock-data directory...")
+  mkdirSync("./mock-data")
 }
 
 writeFileSync("./mock-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))

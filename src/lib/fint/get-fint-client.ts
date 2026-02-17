@@ -5,9 +5,9 @@ import { MockFintClient } from "./mock-fint-client.js"
 let fintClient: IFintClient
 
 if (MOCK_FINT) {
-	fintClient = new MockFintClient()
+  fintClient = new MockFintClient()
 } else {
-	throw new Error("No real FINT client implemented yet.")
+  throw new Error("No real FINT client implemented yet.")
 }
 
 export const getFintClient = (): IFintClient => fintClient
