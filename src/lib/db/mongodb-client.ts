@@ -1,8 +1,8 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { type Db, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
+import { type Db, Document, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, School } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, NewSchool } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
   private readonly mongoClient: MongoClient
@@ -29,7 +29,7 @@ export class MongoDbClient implements IDbClient {
     }
   }
 
-  private async replaceCollection<T>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
+  private async replaceCollection<T extends Document>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
     const db = await this.getDb()
     const collections = await db.listCollections().toArray()
     const previousCollectionName = `${collectionName}_previous`
@@ -121,8 +121,8 @@ export class MongoDbClient implements IDbClient {
     return await db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).find().toArray()
   }
 
-  async replaceSchools(schools: (DbSchool | School)[]): Promise<void> {
-    await this.replaceCollection<DbSchool | School>(MONGODB.COLLECTIONS.SCHOOLS, schools)
+  async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
+    await this.replaceCollection<DbSchool | NewSchool>(MONGODB.COLLECTIONS.SCHOOLS, schools)
   }
 }
 

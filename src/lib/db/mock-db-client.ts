@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, School } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, NewSchool } from "../../types/db/shared-types.js"
 
 type MockDb = {
   access: DbAccess[]
@@ -86,7 +86,7 @@ export class MockDbClient implements IDbClient {
     return mockDb.schools
   }
 
-  async replaceSchools(schools: (DbSchool | School)[]): Promise<void> {
+  async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
     const withIds: DbSchool[] = schools.map((school) => {
       if ("_id" in school) {
         return school

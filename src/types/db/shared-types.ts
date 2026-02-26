@@ -12,6 +12,7 @@ export type Teacher = {
 export type Group = {
   systemId: string
   name: string
+  source: Source
 }
 
 export type GroupMembership = {
@@ -49,12 +50,22 @@ export type ContactTeacherGroupMembership = GroupMembership & {
   contactTeacherGroup: ContactTeacherGroup
 }
 
-export type School = {
+export type SchoolInfo = {
   name: string
   schoolNumber: string
 }
 
-export type DbSchool = School & {
+export type NewSchool = SchoolInfo & {
+  created: EditorData
+  modified: EditorData,
+  source: Source
+}
+
+export type School = NewSchool & {
+  _id: string
+}
+
+export type DbSchool = NewSchool & {
   _id: ObjectId
 }
 
@@ -71,13 +82,16 @@ export type StudentEnrollment = {
   teachingGroupMemberships: TeachingGroupMembership[]
   contactTeacherGroupMemberships: ContactTeacherGroupMembership[]
   period: Period
-  school: School
+  school: SchoolInfo
   mainSchool: boolean
+  source: Source
 }
 
-export type MainSchool = School & {
+export type MainSchool = SchoolInfo & {
   enrollmentSystemId: string
 }
+
+export type Source = "AUTO" | "MANUAL"
 
 /** En elev i db for denne appen */
 export type NewAppStudent = {
@@ -93,7 +107,9 @@ export type NewAppStudent = {
   mainSchool: MainSchool | null
   mainClass: Group | null
   mainContactTeacherGroup: ContactTeacherGroup | null
-  lastSynced: string
+  created: EditorData
+  modified: EditorData
+  source: Source
 }
 
 export type AppStudent = NewAppStudent & {
@@ -108,13 +124,8 @@ export type AccessEntryBase = {
   /** Hvilken skole gjelder tilgangen for */
   schoolNumber: string
   /** Hvem har gitt tilgangen */
-  granted: {
-    by: {
-      _id: string
-      name: string
-    }
-    at: string
-  }
+  granted: EditorData
+  source: Source
 }
 
 export type SchoolManualAccessEntry = AccessEntryBase & {
@@ -186,6 +197,9 @@ export type NewAppUser = {
     companyName: string
     department: string
   }
+  created: EditorData
+  modified: EditorData
+  source: Source
 }
 
 export type AppUser = NewAppUser & {
@@ -203,6 +217,9 @@ export type NewProgramArea = {
     systemId: string
     name: string
   }[]
+  created: EditorData
+  modified: EditorData
+  source: Source
 }
 
 export type ProgramArea = NewProgramArea & {
@@ -290,7 +307,7 @@ export type DocumentMessage = NewDocumentMessage & {
 }
 
 export type DocumentBase = {
-  school: School
+  school: SchoolInfo
   title: string
   created: EditorData
   modified: EditorData

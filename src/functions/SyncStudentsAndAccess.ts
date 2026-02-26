@@ -28,7 +28,7 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
     logger.info(`Fetching students for school ${skole.navn} (${skole.skolenummer.identifikatorverdi})...`)
     const schoolWithStudents = await fintClient.getSchoolWithStudents(skole.skolenummer.identifikatorverdi)
     schoolsWithStudents.push(schoolWithStudents)
-    logger.info(`Fetched ${schoolWithStudents.skole?.elevforhold.length} elevforhold for school ${skole.navn} (${skole.skolenummer.identifikatorverdi})`)
+    logger.info(`Fetched ${schoolWithStudents.skole?.elevforhold?.length} elevforhold for school ${skole.navn} (${skole.skolenummer.identifikatorverdi})`)
   }
   logger.info(`Fetched students for all ${schoolsWithStudents.length} schools.`)
 

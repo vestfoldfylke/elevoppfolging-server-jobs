@@ -1,7 +1,7 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
 import { ObjectId } from "mongodb"
-import { FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
+import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
   ClassMembership,
@@ -11,11 +11,13 @@ import type {
   DbAppStudent,
   DbAppUser,
   DbSchool,
+  EditorData,
   NewAccess,
   NewAppStudent,
   NewAppUser,
+  NewSchool,
   Period,
-  School,
+  SchoolInfo,
   StudentEnrollment,
   Teacher,
   TeachingGroupAutoAccessEntry,
@@ -87,32 +89,42 @@ export const updateUsersStudentsAndAccess = (
   currentSchools: DbSchool[],
   fintSchoolsWithStudents: FintSchoolWithStudents[],
   enterpriseApplicationUsers: User[]
-): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[]; updatedSchools: (DbSchool | School)[] } => {
+): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[]; updatedSchools: (DbSchool | NewSchool)[] } => {
   const syncTimestamp: string = new Date().toISOString()
 
+  const editorData: EditorData = {
+    by: {
+      entraUserId: "system",
+      fallbackName: APP_NAME
+    },
+    at: syncTimestamp
+  }
+
   const updatedAppUsers: (DbAppUser | NewAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
-  const linkedMockUsers: Record<string, boolean> = {}
+  const linkedMockUsers: Record<string, string> = {}
 
   const updatedStudents: (DbAppStudent | NewAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
-  // wipe all previous student enrollments, and set all students to inactive
-  updatedStudents.forEach((student: DbAppStudent) => {
-    student.studentEnrollments = []
+  
+  // wipe all previous student enrollments except manual, and set all students to inactive
+  updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
+    student.studentEnrollments = student.studentEnrollments.filter((enrollment) => enrollment.source === "MANUAL")
     student.active = false
   })
 
   const updatedAccess: (DbAccess | NewAccess)[] = JSON.parse(JSON.stringify(currentAccess))
   // wipe previous auto access
-  updatedAccess.forEach((access: DbAccess) => {
+  updatedAccess.forEach((access: DbAccess | NewAccess) => {
     access.classes = access.classes.filter((entry) => entry.type !== "AUTOMATISK-KLASSE-TILGANG")
     access.teachingGroups = access.teachingGroups.filter((entry) => entry.type !== "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG")
     access.contactTeacherGroups = access.contactTeacherGroups.filter((entry) => entry.type !== "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")
   })
 
-  const updatedSchools: (DbSchool | School)[] = JSON.parse(JSON.stringify(currentSchools))
+  const updatedSchools: (DbSchool | NewSchool)[] = JSON.parse(JSON.stringify(currentSchools))
 
   // Internal helper/repack functions - don't need state, so no class for now
   const upsertAppUser = (enterpriseApplicationUser: User) => {
     let appUser: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((user: DbAppUser | NewAppUser) => user.entra.id === enterpriseApplicationUser.id)
+    
     if (!appUser) {
       if (
         !enterpriseApplicationUser.id ||
@@ -132,9 +144,12 @@ export const updateUsersStudentsAndAccess = (
           id: enterpriseApplicationUser.id,
           userPrincipalName: enterpriseApplicationUser.userPrincipalName,
           displayName: enterpriseApplicationUser.displayName,
-          companyName: enterpriseApplicationUser.companyName,
-          department: enterpriseApplicationUser.department
-        }
+          companyName: enterpriseApplicationUser.companyName || "Ukjent company",
+          department: enterpriseApplicationUser.department || "Ukjent avdeling"
+        },
+        created: editorData,
+        modified: editorData,
+        source: "AUTO"
       }
       updatedAppUsers.push(appUser)
       return
@@ -156,33 +171,8 @@ export const updateUsersStudentsAndAccess = (
       appUser.feideName = `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`
     }
     appUser.active = Boolean(enterpriseApplicationUser.accountEnabled)
-  }
-
-  const addFintMockTeacherToAppUsers = (undervisningsforhold: FintUndervisningsforhold): NewAppUser => {
-    if (!MOCK_FINT) {
-      throw new Error("addFintMockUsersToAppUsers should only be called when MOCK_FINT is true")
-    }
-    if (!undervisningsforhold.skoleressurs.feidenavn || !undervisningsforhold.skoleressurs.feidenavn.identifikatorverdi) {
-      logger.warn("Undervisningsforhold med systemId {SystemId} har ingen skoleressurs med feidenavn tilknyttet, hopper over", undervisningsforhold.systemId.identifikatorverdi)
-      throw new Error(`Undervisningsforhold med systemId ${undervisningsforhold.systemId.identifikatorverdi} har ingen skoleressurs med feidenavn - lag nå mock-data som gir dette da, takk`)
-    }
-    const feideName: string = undervisningsforhold.skoleressurs.feidenavn.identifikatorverdi
-    const firstName: string = undervisningsforhold.skoleressurs.person?.navn.fornavn || "Mock"
-    const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Mockesen"
-    // add to app users - and use inside repack, for now. Det er mock-lærere, så vi driter i å oppdatere navn osv.
-    const mockAppUser: NewAppUser = {
-      feideName,
-      active: true,
-      entra: {
-        id: `mock-${feideName}`,
-        userPrincipalName: feideName,
-        displayName: `${firstName} ${lastName}`,
-        companyName: "Mock Company",
-        department: "Mock Department"
-      }
-    }
-    updatedAppUsers.push(mockAppUser)
-    return mockAppUser
+    appUser.modified = editorData
+    appUser.source = "AUTO"
   }
 
   const findUserByFeideName = (feideName: string): DbAppUser | NewAppUser | null => {
@@ -206,10 +196,10 @@ export const updateUsersStudentsAndAccess = (
       const firstName: string = undervisningsforhold.skoleressurs.person?.navn.fornavn || "Ukjent fornavn"
       const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Ukjent etternavn"
 
-      let entraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
-      // Bare fyll opp med appuserids til å begynne med - deretter kan du opprette mock brukere
-      if (!entraUserId && MOCK_FINT) {
-        // Hvis det er noen entra app-users som ikke har fått seg en lærer-knytning, så knytter vi opp denne læreren til en app-user. Hvis ikke kan vi bare legge den til som mock-app-user
+      const teacherEntraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
+      
+      if (MOCK_FINT && !teacherEntraUserId) {
+        // Hvis denne mock-læreren ikke er knyttet opp allerede, og det er noen entra app-users som ikke har fått seg en lærer-knytning, så knytter vi opp denne læreren til en app-user.
         const userToLink = updatedAppUsers.find(
           (appUser: DbAppUser | NewAppUser) => !linkedMockUsers[appUser.entra.id] && appUser.active && enterpriseApplicationUsers.some((entraUser) => entraUser.id === appUser.entra.id)
         )
@@ -217,7 +207,7 @@ export const updateUsersStudentsAndAccess = (
           logger.warn("Har flere app-brukere å linke opp i MOCK - linker opp denne læreren {TeacherName} til app-bruker {DisplayName}", `${firstName} ${lastName}`, userToLink.entra.displayName)
           userToLink.feideName = feideName
 
-          linkedMockUsers[userToLink.entra.id] = true
+          linkedMockUsers[userToLink.entra.id] = feideName
 
           return {
             entraUserId: userToLink.entra.id,
@@ -226,12 +216,9 @@ export const updateUsersStudentsAndAccess = (
             systemId: undervisningsforhold.skoleressurs.systemId.identifikatorverdi
           }
         }
-
-        const newMockUser: NewAppUser = addFintMockTeacherToAppUsers(undervisningsforhold)
-        entraUserId = newMockUser.entra.id
       }
       return {
-        entraUserId,
+        entraUserId: teacherEntraUserId,
         feideName: feideName,
         name: `${firstName} ${lastName}`,
         systemId: undervisningsforhold.skoleressurs.systemId.identifikatorverdi
@@ -249,7 +236,8 @@ export const updateUsersStudentsAndAccess = (
         classGroup: {
           systemId: klassemedlemskap.klasse.systemId.identifikatorverdi,
           name: klassemedlemskap.klasse.navn,
-          teachers: repackTeachingAssignments(klassemedlemskap.klasse.undervisningsforhold, elev)
+          teachers: repackTeachingAssignments(klassemedlemskap.klasse.undervisningsforhold, elev),
+          source: "AUTO"
         }
       }
     })
@@ -269,7 +257,8 @@ export const updateUsersStudentsAndAccess = (
         teachingGroup: {
           systemId: undervisningsgruppemedlemskap.undervisningsgruppe.systemId.identifikatorverdi,
           name: undervisningsgruppemedlemskap.undervisningsgruppe.navn,
-          teachers: repackTeachingAssignments(undervisningsgruppemedlemskap.undervisningsgruppe.undervisningsforhold, elev)
+          teachers: repackTeachingAssignments(undervisningsgruppemedlemskap.undervisningsgruppe.undervisningsforhold, elev),
+          source: "AUTO"
         }
       }
     })
@@ -289,13 +278,14 @@ export const updateUsersStudentsAndAccess = (
         contactTeacherGroup: {
           systemId: kontaktlarergruppemedlemskap.kontaktlarergruppe.systemId.identifikatorverdi,
           name: kontaktlarergruppemedlemskap.kontaktlarergruppe.navn,
-          teachers: repackTeachingAssignments(kontaktlarergruppemedlemskap.kontaktlarergruppe.undervisningsforhold, elev)
+          teachers: repackTeachingAssignments(kontaktlarergruppemedlemskap.kontaktlarergruppe.undervisningsforhold, elev),
+          source: "AUTO"
         }
       }
     })
   }
 
-  const repackSchool = (skole: FintSkole): School => {
+  const repackSchool = (skole: FintSkole): SchoolInfo => {
     return {
       name: skole.navn,
       schoolNumber: skole.skolenummer.identifikatorverdi
@@ -307,7 +297,7 @@ export const updateUsersStudentsAndAccess = (
       logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
       return
     }
-    let teacherAccess: DbAccess | NewAccess | undefined = updatedAccess.find((access: DbAccess) => access.entraUserId === teacher.entraUserId)
+    let teacherAccess: DbAccess | NewAccess | undefined = updatedAccess.find((access: DbAccess | NewAccess) => access.entraUserId === teacher.entraUserId)
     if (!teacherAccess) {
       teacherAccess = {
         entraUserId: teacher.entraUserId,
@@ -367,11 +357,11 @@ export const updateUsersStudentsAndAccess = (
   logger.info("Starter synk av elever og tilganger basert på FINT-data")
   for (const schoolWithStudents of fintSchoolsWithStudents) {
     if (!schoolWithStudents.skole) {
-      logger.error("Fikk ikke skole-data for skole med skolenummer {SchoolNumber}, hopper over", schoolWithStudents.skole.skolenummer.identifikatorverdi)
+      logger.error("Fikk ikke skole-data for skole @{School}, hopper over", schoolWithStudents)
       continue
     }
 
-    const school: School = repackSchool(schoolWithStudents.skole)
+    const school: SchoolInfo = repackSchool(schoolWithStudents.skole)
 
     logger.info("Behandler eleveforhold for skole {SchoolName} ({SchoolNumber})", school.name, school.schoolNumber)
 
@@ -408,7 +398,8 @@ export const updateUsersStudentsAndAccess = (
         contactTeacherGroupMemberships: repackContactTeacherGroupMemberships(elevforhold.kontaktlarergruppemedlemskap, elev),
         period: repackPeriode(elevforhold.gyldighetsperiode),
         school,
-        mainSchool: Boolean(elevforhold.hovedskole)
+        mainSchool: Boolean(elevforhold.hovedskole),
+        source: "AUTO"
       }
 
       // Går gjennom klassemedlemskap for å oppdatere lærer-tilganger - deretter kontaklærergruppemedlemskap og undervisningsgruppemedlemskap
@@ -420,13 +411,8 @@ export const updateUsersStudentsAndAccess = (
               systemId: classMembership.classGroup.systemId,
               schoolNumber: school.schoolNumber,
               type: "AUTOMATISK-KLASSE-TILGANG",
-              granted: {
-                by: {
-                  _id: "SYSTEM",
-                  name: "SYNC JOB"
-                },
-                at: new Date().toISOString()
-              }
+              granted: editorData,
+              source: "AUTO"
             }
             upsertTeacherAccess(teacher, accessEntry)
           }
@@ -437,13 +423,8 @@ export const updateUsersStudentsAndAccess = (
               systemId: teachingGroupMembership.teachingGroup.systemId,
               schoolNumber: school.schoolNumber,
               type: "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG",
-              granted: {
-                by: {
-                  _id: "SYSTEM",
-                  name: "SYNC JOB"
-                },
-                at: new Date().toISOString()
-              }
+              granted: editorData,
+              source: "AUTO"
             }
             upsertTeacherAccess(teacher, accessEntry)
           }
@@ -454,20 +435,15 @@ export const updateUsersStudentsAndAccess = (
               systemId: contactTeacherGroupMembership.contactTeacherGroup.systemId,
               schoolNumber: school.schoolNumber,
               type: "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG",
-              granted: {
-                by: {
-                  _id: "SYSTEM",
-                  name: "SYNC JOB"
-                },
-                at: new Date().toISOString()
-              }
+              granted: editorData,
+              source: "AUTO"
             }
             upsertTeacherAccess(teacher, accessEntry)
           }
         }
       }
 
-      let currentStudent: DbAppStudent | NewAppStudent | undefined = updatedStudents.find((student: DbAppStudent) => {
+      let currentStudent: DbAppStudent | NewAppStudent | undefined = updatedStudents.find((student: DbAppStudent | NewAppStudent) => {
         return student.systemId === elev.systemId.identifikatorverdi || student.ssn === elev.person.fodselsnummer.identifikatorverdi
       })
       if (!currentStudent) {
@@ -482,7 +458,9 @@ export const updateUsersStudentsAndAccess = (
           mainSchool: null,
           mainClass: null,
           mainContactTeacherGroup: null,
-          lastSynced: syncTimestamp
+          created: editorData,
+          modified: editorData,
+          source: "AUTO"
         }
         updatedStudents.push(currentStudent)
       } else {
@@ -493,26 +471,22 @@ export const updateUsersStudentsAndAccess = (
         currentStudent.feideName = elev.feidenavn.identifikatorverdi
         currentStudent.ssn = elev.person.fodselsnummer.identifikatorverdi
         currentStudent.studentNumber = elev.elevnummer.identifikatorverdi
-        currentStudent.lastSynced = syncTimestamp
+        currentStudent.modified = editorData
+        currentStudent.source = "AUTO"
         // Add some props if missing
+        currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
         currentStudent.mainClass ??= null
         currentStudent.mainSchool ??= null
         currentStudent.mainContactTeacherGroup ??= null
       }
-
       currentStudent.studentEnrollments.push(studentEnrollment)
     }
   }
 
   logger.info("Ferdig med å mappe elever og tilganger basert på FINT-data - finner og setter main-props for hver elev")
-  // Etter at all mapping er gjort, så går vi gjennom alle elever og setter main*-props basert på prioritert logikk
+  // Etter at all mapping er gjort, så går vi gjennom alle elever og setter main-props basert på prioritert logikk
 
-  // Her kan vi også smelle på manuelle elevforhold fra egen collection
-  // Settes kun på elever som ikke har et elevforhold ved gitt skole fra før av. Manuelle elevforhold blir overstyrt av elevforhold fra FINT dersom de dukker opp.
-  // Vi har allerede mappa elever på fnr. Vi kan legge manuelle elever rett inn i students-collection, så blir de kobla automatisk mot FINT dersom de dukker opp i FINT.
-
-  // Når man oppretter en manuell elev - MÅ det gjøres ved en skole (aka vi oppretter både eleven og elevforholdet samtidig, og sikkert da en klasse ellerno også)
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
     // Set _id to ObjectId again (removed by JSON.parse/stringify)
     if ("_id" in student) {
@@ -522,6 +496,24 @@ export const updateUsersStudentsAndAccess = (
     if (student.studentEnrollments.length === 0) {
       return
     }
+
+    // Set manual enrollments to inactive if there is at least one AUTO enrollment for the same school, set to active if there is no active AUTO enrollment for the school
+    const schoolsWithAutoEnrollment = student.studentEnrollments.filter((enrollment) => enrollment.period.active && enrollment.source === "AUTO").map((enrollment) => enrollment.school.schoolNumber)
+    student.studentEnrollments.forEach((enrollment) => {
+      if (enrollment.source !== "MANUAL") {
+        return
+      }
+      if (schoolsWithAutoEnrollment.includes(enrollment.school.schoolNumber)) {
+        enrollment.period.active = false
+        logger.warn("Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til inactive, da det finnes et automatisk elevforhold for samme skole", student.name, enrollment.school.schoolNumber)
+        return
+      }
+      if (!enrollment.period.active) {
+        logger.warn("Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til active, da det ikke finnes et aktivt automatisk elevforhold for samme skole", student.name, enrollment.school.schoolNumber)
+        enrollment.period.active = true
+      }
+    })
+
     // Set student active status based on at least one active enrollment
     student.active = student.studentEnrollments.some((enrollment) => enrollment.period.active)
     if (!student.active) {
@@ -531,7 +523,13 @@ export const updateUsersStudentsAndAccess = (
     // Check if this i a new school - add it to updatedSchools if it doesn't exist already
     student.studentEnrollments.forEach((enrollment) => {
       if (!updatedSchools.some((school) => school.schoolNumber === enrollment.school.schoolNumber)) {
-        updatedSchools.push(enrollment.school)
+        updatedSchools.push({
+          name: enrollment.school.name,
+          schoolNumber: enrollment.school.schoolNumber,
+          created: editorData,
+          modified: editorData,
+          source: "AUTO"
+        })
       }
     })
 
@@ -548,7 +546,8 @@ export const updateUsersStudentsAndAccess = (
     if (mainClassMembership) {
       student.mainClass = {
         name: mainClassMembership.classGroup.name,
-        systemId: mainClassMembership.classGroup.systemId
+        systemId: mainClassMembership.classGroup.systemId,
+        source: mainClassMembership.classGroup.source
       }
     }
     const mainContactTeacherGroupMembership = mainEnrollment.contactTeacherGroupMemberships.find((ctgm) => ctgm.period.active)
@@ -571,7 +570,7 @@ export const updateUsersStudentsAndAccess = (
     }
   })
 
-  updatedSchools.forEach((school: DbSchool | School) => {
+  updatedSchools.forEach((school: DbSchool | NewSchool) => {
     // Set _id to ObjectId again (removed by JSON.parse/stringify)
     if ("_id" in school) {
       school._id = new ObjectId(school._id)
