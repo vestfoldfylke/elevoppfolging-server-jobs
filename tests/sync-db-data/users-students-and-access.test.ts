@@ -5,7 +5,7 @@ import { ObjectId } from "mongodb"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppUser } from "../../src/types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppUser, School } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 
@@ -72,7 +72,7 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
   return { valid: true, reason: "" }
 }
 
-const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[]): { valid: boolean; reason: string } => {
+const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[], updatedSchools: (DbSchool | School)[]): { valid: boolean; reason: string } => {
   for (const enrollment of student.studentEnrollments) {
     const school = schoolsWithStudents.find((s) => s.skole.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
     if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
@@ -85,6 +85,12 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
 
     const repackedPeriode = repackPeriode(enrollmentInFint.gyldighetsperiode)
     if (repackedPeriode.active !== enrollment.period.active) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched active status` }
+
+    if (repackedPeriode.active) {
+      const schoolInUpdatedSchools = updatedSchools.find((s) => s.schoolNumber === enrollment.school.schoolNumber)
+      if (!schoolInUpdatedSchools)
+        return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found in updated schools, but student-enrollment is active at this school` }
+    }
 
     const allClassesPresent = enrollmentInFint.klassemedlemskap.every((km) => {
       return enrollment.classMemberships.some((cm) => cm.systemId === km.systemId.identifikatorverdi)
@@ -218,7 +224,7 @@ describe("sync-db-data/users-students-and-access", () => {
   writeFileSync("./tests/sync-db-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))
 
   describe("data is mapped correctly when only given mockSchools", () => {
-    const result = updateUsersStudentsAndAccess([], [], [], mockSchools, [])
+    const result = updateUsersStudentsAndAccess([], [], [], [], mockSchools, [])
 
     it("should create students without duplicates", () => {
       // find duplicate students
@@ -234,7 +240,7 @@ describe("sync-db-data/users-students-and-access", () => {
     })
     it("should create valid students", () => {
       for (const student of result.updatedStudents) {
-        const validation = studentIsValid(student as DbAppStudent, mockSchools)
+        const validation = studentIsValid(student as DbAppStudent, mockSchools, result.updatedSchools)
         assert(validation.valid, `Student validation failed: ${validation.reason}`)
       }
     })
@@ -466,10 +472,19 @@ describe("sync-db-data/users-students-and-access", () => {
       }
     ]
 
+    const tullVgsId = new ObjectId()
+    const currentSchools: DbSchool[] = [
+      {
+        _id: tullVgsId,
+        name: "Tull vgs",
+        schoolNumber: "42"
+      }
+    ]
+
     const mockEntraClient = getEntraClient()
     const mockEntraUsers = await mockEntraClient.getEnterpriseApplicationUsers()
 
-    const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, mockSchools, mockEntraUsers)
+    const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, currentSchools, mockSchools, mockEntraUsers)
     writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
     it("should create students without duplicates", () => {
@@ -546,9 +561,14 @@ describe("sync-db-data/users-students-and-access", () => {
 
     it("should create valid students", () => {
       for (const student of result.updatedStudents) {
-        const validation = studentIsValid(student as DbAppStudent, mockSchools)
+        const validation = studentIsValid(student as DbAppStudent, mockSchools, result.updatedSchools)
         assert(validation.valid, `Student validation failed: ${validation.reason}`)
       }
+    })
+
+    it("should preserve previous schools when updating", () => {
+      const preservedSchool = result.updatedSchools.find((s) => s.schoolNumber === "42" && "_id" in s && s._id.toString() === tullVgsId.toString())
+      assert(preservedSchool, "Expected to find preserved school, but not found")
     })
 
     it("Should set active to false for users that are no longer active in Entra", () => {

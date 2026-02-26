@@ -10,6 +10,7 @@ import type {
   DbAccess,
   DbAppStudent,
   DbAppUser,
+  DbSchool,
   NewAccess,
   NewAppStudent,
   NewAppUser,
@@ -83,9 +84,10 @@ export const updateUsersStudentsAndAccess = (
   currentAppUsers: DbAppUser[],
   currentStudents: DbAppStudent[],
   currentAccess: DbAccess[],
+  currentSchools: DbSchool[],
   fintSchoolsWithStudents: FintSchoolWithStudents[],
   enterpriseApplicationUsers: User[]
-): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[] } => {
+): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[]; updatedSchools: (DbSchool | School)[] } => {
   const syncTimestamp: string = new Date().toISOString()
 
   const updatedAppUsers: (DbAppUser | NewAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
@@ -105,6 +107,8 @@ export const updateUsersStudentsAndAccess = (
     access.teachingGroups = access.teachingGroups.filter((entry) => entry.type !== "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG")
     access.contactTeacherGroups = access.contactTeacherGroups.filter((entry) => entry.type !== "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")
   })
+
+  const updatedSchools: (DbSchool | School)[] = JSON.parse(JSON.stringify(currentSchools))
 
   // Internal helper/repack functions - don't need state, so no class for now
   const upsertAppUser = (enterpriseApplicationUser: User) => {
@@ -182,7 +186,7 @@ export const updateUsersStudentsAndAccess = (
   }
 
   const findUserByFeideName = (feideName: string): DbAppUser | NewAppUser | null => {
-    const user: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((appUser: DbAppUser | NewAppUser) => appUser.feideName?.toLowerCase() === feideName.toLowerCase())
+    const user: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((appUser: DbAppUser | NewAppUser) => appUser.feideName.toLowerCase() === feideName.toLowerCase())
     return user || null
   }
 
@@ -482,9 +486,6 @@ export const updateUsersStudentsAndAccess = (
         }
         updatedStudents.push(currentStudent)
       } else {
-        if ("_id" in currentStudent) {
-          currentStudent._id = new ObjectId(currentStudent._id) // Set ObjectId for existing students (JSON.parse/stringify removes it)
-        }
         // Update basic student data in case of changes
         currentStudent.systemId = elev.systemId.identifikatorverdi // Obs, skal vi gjøre dette?
         currentStudent.ssn = elev.person.fodselsnummer.identifikatorverdi // Ja, dette skal vi gjøre
@@ -504,9 +505,20 @@ export const updateUsersStudentsAndAccess = (
     }
   }
 
-  logger.info("Ferdig med å mappe elever og tilganger basert på FINT-data - finner og setter main*-props for hver elev")
+  logger.info("Ferdig med å mappe elever og tilganger basert på FINT-data - finner og setter main-props for hver elev")
   // Etter at all mapping er gjort, så går vi gjennom alle elever og setter main*-props basert på prioritert logikk
+
+  // Her kan vi også smelle på manuelle elevforhold fra egen collection
+  // Settes kun på elever som ikke har et elevforhold ved gitt skole fra før av. Manuelle elevforhold blir overstyrt av elevforhold fra FINT dersom de dukker opp.
+  // Vi har allerede mappa elever på fnr. Vi kan legge manuelle elever rett inn i students-collection, så blir de kobla automatisk mot FINT dersom de dukker opp i FINT.
+
+  // Når man oppretter en manuell elev - MÅ det gjøres ved en skole (aka vi oppretter både eleven og elevforholdet samtidig, og sikkert da en klasse ellerno også)
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
+    // Set _id to ObjectId again (removed by JSON.parse/stringify)
+    if ("_id" in student) {
+      student._id = new ObjectId(student._id)
+    }
+
     if (student.studentEnrollments.length === 0) {
       return
     }
@@ -515,6 +527,14 @@ export const updateUsersStudentsAndAccess = (
     if (!student.active) {
       return
     }
+
+    // Check if this i a new school - add it to updatedSchools if it doesn't exist already
+    student.studentEnrollments.forEach((enrollment) => {
+      if (!updatedSchools.some((school) => school.schoolNumber === enrollment.school.schoolNumber)) {
+        updatedSchools.push(enrollment.school)
+      }
+    })
+
     const mainEnrollment = student.studentEnrollments.find((enrollment) => enrollment.mainSchool && enrollment.period.active)
     if (!mainEnrollment) {
       logger.warn("Fant ingen main school for elev {studentName} {feideName} med aktive elevforhold", student.name, student.feideName)
@@ -537,10 +557,32 @@ export const updateUsersStudentsAndAccess = (
     }
   })
 
+  updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
+    // Set _id to ObjectId again (removed by JSON.parse/stringify)
+    if ("_id" in appUser) {
+      appUser._id = new ObjectId(appUser._id)
+    }
+  })
+
+  updatedAccess.forEach((access: DbAccess | NewAccess) => {
+    // Set _id to ObjectId again (removed by JSON.parse/stringify)
+    if ("_id" in access) {
+      access._id = new ObjectId(access._id)
+    }
+  })
+
+  updatedSchools.forEach((school: DbSchool | School) => {
+    // Set _id to ObjectId again (removed by JSON.parse/stringify)
+    if ("_id" in school) {
+      school._id = new ObjectId(school._id)
+    }
+  })
+
   logger.info("Ferdig med synk av elever og tilganger basert på FINT-data")
   return {
     updatedAppUsers,
     updatedStudents,
-    updatedAccess
+    updatedAccess,
+    updatedSchools
   }
 }

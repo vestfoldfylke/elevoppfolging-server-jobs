@@ -48,9 +48,13 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   const dbAccess = await dbClient.getAccess()
   logger.info(`Fetched ${dbAccess.length} access records from database.`)
 
+  logger.info("Fetching schools records from database...")
+  const dbSchools = await dbClient.getSchools()
+  logger.info(`Fetched ${dbSchools.length} schools records from database.`)
+
   logger.info("Syncing users and students...")
 
-  const updatedData = updateUsersStudentsAndAccess(dbUsers, dbStudents, dbAccess, schoolsWithStudents, appUsers)
+  const updatedData = updateUsersStudentsAndAccess(dbUsers, dbStudents, dbAccess, dbSchools, schoolsWithStudents, appUsers)
 
   logger.info("Updating database with new users, students and access records...")
   await dbClient.replaceUsers(updatedData.updatedAppUsers)
@@ -59,6 +63,10 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   logger.info("Updated students in database.")
   await dbClient.replaceAccess(updatedData.updatedAccess)
   logger.info("Updated access records in database.")
+  await dbClient.replaceSchools(updatedData.updatedSchools)
+  logger.info("Updated schools records in database.")
+
+  logger.info("Sync completed successfully.")
 
   return { body: `Hello balle!` }
 }

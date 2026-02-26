@@ -19,7 +19,8 @@ export const MONGODB = {
     STUDENTS: "students",
     USERS: "users",
     ACCESS: "access",
-    DOCUMENTS: "documents"
+    DOCUMENTS: "documents",
+    SCHOOLS: "schools"
   }
 }
 

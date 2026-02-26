@@ -2,7 +2,7 @@ import { logger } from "@vestfoldfylke/loglady"
 import { type Db, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, School } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
   private readonly mongoClient: MongoClient
@@ -114,6 +114,15 @@ export class MongoDbClient implements IDbClient {
 
   async replaceAccess(accesses: (DbAccess | NewAccess)[]): Promise<void> {
     await this.replaceCollection<DbAccess | NewAccess>(MONGODB.COLLECTIONS.ACCESS, accesses)
+  }
+
+  async getSchools(): Promise<DbSchool[]> {
+    const db = await this.getDb()
+    return await db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).find().toArray()
+  }
+
+  async replaceSchools(schools: (DbSchool | School)[]): Promise<void> {
+    await this.replaceCollection<DbSchool | School>(MONGODB.COLLECTIONS.SCHOOLS, schools)
   }
 }
 

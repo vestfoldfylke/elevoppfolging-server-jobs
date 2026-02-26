@@ -54,6 +54,10 @@ export type School = {
   schoolNumber: string
 }
 
+export type DbSchool = School & {
+  _id: ObjectId
+}
+
 export type Period = {
   start: string | null
   end: string | null
@@ -135,6 +139,12 @@ export type ClassAutoAccessEntry = AccessEntryBase & {
   type: "AUTOMATISK-KLASSE-TILGANG"
 }
 
+export type ClassManualAccessEntry = AccessEntryBase & {
+  /** FINT system-id for klassen det er gitt tilgang til */
+  systemId: string
+  type: "MANUELL-KLASSE-TILGANG"
+}
+
 export type ContactTeacherGroupAutoAccessEntry = AccessEntryBase & {
   /** FINT system-id for undervisningsgruppen det er gitt tilgang til */
   systemId: string
@@ -152,7 +162,7 @@ export type NewAccess = {
   name: string
   schools: SchoolManualAccessEntry[]
   programAreas: ProgramAreaManualAccessEntry[]
-  classes: ClassAutoAccessEntry[]
+  classes: (ClassAutoAccessEntry | ClassManualAccessEntry)[]
   contactTeacherGroups: ContactTeacherGroupAutoAccessEntry[]
   teachingGroups: TeachingGroupAutoAccessEntry[]
   students: StudentManualAccessEntry[]
@@ -206,12 +216,12 @@ export type DbProgramArea = NewProgramArea & {
 // DOCUMENTS
 
 export type DocumentHeaderItem = {
-  type: "h1" | "h2" | "h3"
+  type: "header"
   value: string
 }
 
 export type DocumentParagraphItem = {
-  type: "p"
+  type: "paragraph"
   value: string
 }
 
@@ -234,7 +244,21 @@ export type DocumentTextAreaItem = {
   helpText?: string
 }
 
-export type DocumentInputItem = DocumentTextInputItem | DocumentTextAreaItem
+export type DocumentRadioButtonItem = {
+  label: string
+  value: string
+}
+
+export type DocumentRadioGroupItem = {
+  type: "radioGroup"
+  header: string
+  items: DocumentRadioButtonItem[]
+  selectedValue: string
+  required: boolean
+  helpText?: string
+}
+
+export type DocumentInputItem = DocumentTextInputItem | DocumentTextAreaItem | DocumentRadioGroupItem
 
 export type DocumentContentItem = DocumentHeaderItem | DocumentParagraphItem | DocumentInputItem
 
@@ -249,6 +273,7 @@ export type EditorData = {
 
 export type DocumentMessageBase = {
   created: EditorData
+  modified: EditorData
 }
 
 export type DocumentComment = DocumentMessageBase & {
@@ -258,42 +283,46 @@ export type DocumentComment = DocumentMessageBase & {
   }
 }
 
-export type DocumentUpdate = DocumentMessageBase & {
-  type: "update"
-  title: string
-  content: {
-    text: string
-  }
-}
-
-export type NewDocumentMessage = DocumentComment | DocumentUpdate
+export type NewDocumentMessage = DocumentComment
 
 export type DocumentMessage = NewDocumentMessage & {
   messageId: string
 }
 
-export type Document = {
-  schoolNumber: string
+export type DocumentBase = {
+  school: School
   title: string
   created: EditorData
   modified: EditorData
-  contentTemplateId: string
-  contentTemplateVersion: number
+  template: {
+    _id: string
+    name: string
+    version: number
+  }
   content: DocumentContentItem[]
   messages: DocumentMessage[]
+  group?: {
+    systemId: string
+  }
 }
 
-export type NewStudentDocument = Document & {
-  student: {
+export type NewDocument = DocumentBase & {
+  student?: {
     _id: string
   }
 }
 
-export type StudentDocument = NewStudentDocument & {
+export type Document = NewDocument & {
   _id: string
 }
 
-export type DbStudentDocument = NewStudentDocument & {
+export type NewDbDocument = DocumentBase & {
+  student?: {
+    _id: ObjectId
+  }
+}
+
+export type DbDocument = NewDbDocument & {
   _id: ObjectId
 }
 
