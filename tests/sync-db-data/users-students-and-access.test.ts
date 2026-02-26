@@ -5,9 +5,9 @@ import { ObjectId } from "mongodb"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAccess, NewAppUser, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAccess, NewAppUser, NewSchool } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
-import type { FintElev, FintElevforhold, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
+import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
 
 const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
@@ -36,7 +36,9 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
     if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
-      const groupToCheck: FintUndervisningsgruppemedlemskap | null | undefined = ef?.undervisningsgruppemedlemskap?.find((km) => km?.undervisningsgruppe?.systemId?.identifikatorverdi === groupAccess.systemId)
+      const groupToCheck: FintUndervisningsgruppemedlemskap | null | undefined = ef?.undervisningsgruppemedlemskap?.find(
+        (km) => km?.undervisningsgruppe?.systemId?.identifikatorverdi === groupAccess.systemId
+      )
       if (!groupToCheck) return false
       if (!repackPeriode(ef?.gyldighetsperiode).active) return false
       if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
@@ -55,7 +57,9 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
     if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
-      const groupToCheck: FintKontaktlarergruppemedlemskap | null | undefined = ef?.kontaktlarergruppemedlemskap?.find((km) => km?.kontaktlarergruppe.systemId.identifikatorverdi === groupAccess.systemId)
+      const groupToCheck: FintKontaktlarergruppemedlemskap | null | undefined = ef?.kontaktlarergruppemedlemskap?.find(
+        (km) => km?.kontaktlarergruppe.systemId.identifikatorverdi === groupAccess.systemId
+      )
       if (!groupToCheck) return false
       if (!repackPeriode(ef?.gyldighetsperiode).active) return false
       if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
@@ -81,7 +85,8 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!enrollmentInFint) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
     if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
     if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
-    if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
+    if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber)
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
 
     const repackedPeriode = repackPeriode(enrollmentInFint.gyldighetsperiode)
     if (repackedPeriode.active !== enrollment.period.active) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched active status` }
@@ -106,13 +111,14 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
   }
 
-
   if (student.mainSchool) {
     const mainSchoolInFint = schoolsWithStudents.find((s) => s.skole?.skolenummer.identifikatorverdi === student.mainSchool?.schoolNumber)
     if (!mainSchoolInFint) {
       return { valid: false, reason: `Main school specified for student but corresponding enrollment not found for any school in FINT data` }
     }
-    const mainEnrollmentInFint = mainSchoolInFint.skole?.elevforhold?.find((ef) => ef?.systemId.identifikatorverdi === student.mainSchool?.enrollmentSystemId && repackPeriode(ef?.gyldighetsperiode).active)
+    const mainEnrollmentInFint = mainSchoolInFint.skole?.elevforhold?.find(
+      (ef) => ef?.systemId.identifikatorverdi === student.mainSchool?.enrollmentSystemId && repackPeriode(ef?.gyldighetsperiode).active
+    )
     if (!mainEnrollmentInFint) {
       return { valid: false, reason: `Main school specified for student but corresponding enrollment not found in FINT data` }
     }
@@ -298,7 +304,7 @@ describe("sync-db-data/users-students-and-access", () => {
     if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
     const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate])
     if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
-    
+
     const currentStudents: DbAppStudent[] = [
       {
         _id: new ObjectId(),

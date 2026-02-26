@@ -104,7 +104,7 @@ export const updateUsersStudentsAndAccess = (
   const linkedMockUsers: Record<string, string> = {}
 
   const updatedStudents: (DbAppStudent | NewAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
-  
+
   // wipe all previous student enrollments except manual, and set all students to inactive
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
     student.studentEnrollments = student.studentEnrollments.filter((enrollment) => enrollment.source === "MANUAL")
@@ -124,7 +124,7 @@ export const updateUsersStudentsAndAccess = (
   // Internal helper/repack functions - don't need state, so no class for now
   const upsertAppUser = (enterpriseApplicationUser: User) => {
     let appUser: DbAppUser | NewAppUser | undefined = updatedAppUsers.find((user: DbAppUser | NewAppUser) => user.entra.id === enterpriseApplicationUser.id)
-    
+
     if (!appUser) {
       if (
         !enterpriseApplicationUser.id ||
@@ -197,7 +197,7 @@ export const updateUsersStudentsAndAccess = (
       const lastName: string = undervisningsforhold.skoleressurs.person?.navn.etternavn || "Ukjent etternavn"
 
       const teacherEntraUserId: string | null = findUserByFeideName(feideName)?.entra.id || null
-      
+
       if (MOCK_FINT && !teacherEntraUserId) {
         // Hvis denne mock-læreren ikke er knyttet opp allerede, og det er noen entra app-users som ikke har fått seg en lærer-knytning, så knytter vi opp denne læreren til en app-user.
         const userToLink = updatedAppUsers.find(
@@ -505,11 +505,19 @@ export const updateUsersStudentsAndAccess = (
       }
       if (schoolsWithAutoEnrollment.includes(enrollment.school.schoolNumber)) {
         enrollment.period.active = false
-        logger.warn("Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til inactive, da det finnes et automatisk elevforhold for samme skole", student.name, enrollment.school.schoolNumber)
+        logger.warn(
+          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til inactive, da det finnes et automatisk elevforhold for samme skole",
+          student.name,
+          enrollment.school.schoolNumber
+        )
         return
       }
       if (!enrollment.period.active) {
-        logger.warn("Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til active, da det ikke finnes et aktivt automatisk elevforhold for samme skole", student.name, enrollment.school.schoolNumber)
+        logger.warn(
+          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til active, da det ikke finnes et aktivt automatisk elevforhold for samme skole",
+          student.name,
+          enrollment.school.schoolNumber
+        )
         enrollment.period.active = true
       }
     })

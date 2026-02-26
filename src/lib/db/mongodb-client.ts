@@ -1,5 +1,5 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { type Db, Document, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
+import { type Db, type Document, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, NewSchool } from "../../types/db/shared-types.js"

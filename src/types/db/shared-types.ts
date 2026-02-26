@@ -57,7 +57,7 @@ export type SchoolInfo = {
 
 export type NewSchool = SchoolInfo & {
   created: EditorData
-  modified: EditorData,
+  modified: EditorData
   source: Source
 }
 
