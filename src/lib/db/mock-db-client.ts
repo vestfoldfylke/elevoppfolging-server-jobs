@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, NewSchool } from "../../types/db/shared-types.js"
 
 type MockDb = {
   access: DbAccess[]
   students: DbAppStudent[]
   users: DbAppUser[]
+  schools: DbSchool[]
 }
 
 /**
@@ -15,7 +16,8 @@ type MockDb = {
 const mockDb: MockDb = {
   access: [],
   students: [],
-  users: []
+  users: [],
+  schools: []
 }
 
 export class MockDbClient implements IDbClient {
@@ -78,5 +80,23 @@ export class MockDbClient implements IDbClient {
     })
     mockDb.access = withIds
     writeFileSync(`${this.debugFolderPath}/mock-access.json`, JSON.stringify(withIds, null, 2))
+  }
+
+  async getSchools(): Promise<DbSchool[]> {
+    return mockDb.schools
+  }
+
+  async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
+    const withIds: DbSchool[] = schools.map((school) => {
+      if ("_id" in school) {
+        return school
+      }
+      return {
+        ...school,
+        _id: new ObjectId()
+      }
+    })
+    mockDb.schools = withIds
+    writeFileSync(`${this.debugFolderPath}/mock-schools.json`, JSON.stringify(withIds, null, 2))
   }
 }

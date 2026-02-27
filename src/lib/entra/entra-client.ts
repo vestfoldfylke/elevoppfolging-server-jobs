@@ -77,6 +77,10 @@ export class EntraClient implements IEntraClient {
   }
 
   async getEnterpriseApplicationUsers(): Promise<User[]> {
+    if (!FRONTEND_APP_REGISTRATION_ID) {
+      logger.error("FRONTEND_APP_REGISTRATION_ID is not set, cannot fetch enterprise application users")
+      throw new Error("FRONTEND_APP_REGISTRATION_ID is not set, cannot fetch enterprise application users")
+    }
     const appRoleAssignments: AppRoleAssignment[] = await this.getEnterpriseAppAssignments(FRONTEND_APP_REGISTRATION_ID)
 
     const groupAssignments = appRoleAssignments.filter((assignment) => assignment.principalType === "Group")
@@ -84,11 +88,19 @@ export class EntraClient implements IEntraClient {
     const allUsers: Record<string, User> = {}
 
     for (const assignment of groupAssignments) {
+      if (!assignment.principalId) {
+        logger.warn("Skipping app role assignment with id {assignmentId} because it has no principalId", assignment.id)
+        continue
+      }
       logger.info("Group assignment for app: {assignmentId} - {groupId} - {groupName}", assignment.id, assignment.principalId, assignment.principalDisplayName)
       const members = await this.getGroupMembers(assignment.principalId)
       logger.info("Group {groupId} has {memberCount} members", assignment.principalId, members.length)
 
       members.forEach((member) => {
+        if (!member.id) {
+          logger.warn("Skipping group member (displayName: {memberDisplayName}) with missing id in group {groupId}", member.displayName, assignment.principalId)
+          return
+        }
         if (!allUsers[member.id]) {
           allUsers[member.id] = member
         }

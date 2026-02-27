@@ -280,14 +280,16 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
     const skoleelever = norwegianFaker.helpers.arrayElements(elevPool, { min: 3, max: elevPool.length })
 
     if (schoolIndex > 0) {
+      const prevSchool = schools[schoolIndex - 1]
+      const prevSchoolElevforhold = prevSchool.skole?.elevforhold || []
       // Check if any of the skoleelever are already assigned to a previous school
       const alsoStudentAtPreviousSchool = skoleelever.find((elev) => {
-        return schools[schoolIndex - 1].skole.elevforhold.some((ef) => ef.elev.systemId.identifikatorverdi === elev.systemId.identifikatorverdi)
+        return prevSchoolElevforhold.some((ef) => ef?.elev.systemId.identifikatorverdi === elev.systemId.identifikatorverdi)
       })
       if (!alsoStudentAtPreviousSchool) {
-        logger.info(`Could not find cross-school-student. Adding cross-school student from ${schools[schoolIndex - 1].skole.navn} to ${schoolName}`)
+        logger.info(`Could not find cross-school-student. Adding cross-school student from ${prevSchool.skole?.navn} to ${schoolName}`)
         // If not, add one to ensure at least one student is also at a previous school
-        skoleelever.push(norwegianFaker.helpers.arrayElement(schools[schoolIndex - 1].skole.elevforhold).elev)
+        skoleelever.push(norwegianFaker.helpers.arrayElement(prevSchoolElevforhold.filter((ef) => ef !== null)).elev)
       } else {
         logger.info(`Found cross-school-student for ${schoolName}`)
       }
@@ -303,7 +305,9 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
       if (elevIndex === 0) {
         const elevforhold = generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper)
         elevforhold.gyldighetsperiode = validPeriod
+        // @ts-expect-error - we know its there
         elevforhold.klassemedlemskap[0].gyldighetsperiode = expiredPeriod
+        // @ts-expect-error - we know its there
         elevforhold.undervisningsgruppemedlemskap[0].gyldighetsperiode = futurePeriod
         elevforholdPool.push(elevforhold)
         return
@@ -329,9 +333,13 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
       elevforholdPool.push(generateElevforhold(elev, klasse, undervisningsgrupper, kontaktlarergrupper))
     })
 
-    schoolToAdd.skole.elevforhold = elevforholdPool
+    if (schoolToAdd.skole) {
+      schoolToAdd.skole.elevforhold = elevforholdPool
 
-    schools.push(schoolToAdd)
+      schools.push(schoolToAdd)
+    } else {
+      logger.error("Fikk ikke skole-data for skole {@School}, hopper over", schoolToAdd)
+    }
   })
 
   return schools

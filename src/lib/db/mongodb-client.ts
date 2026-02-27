@@ -1,8 +1,8 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { type Db, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
+import { type Db, type Document, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, NewAccess, NewAppStudent, NewAppUser } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAccess, NewAppStudent, NewAppUser, NewSchool } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
   private readonly mongoClient: MongoClient
@@ -29,7 +29,7 @@ export class MongoDbClient implements IDbClient {
     }
   }
 
-  private async replaceCollection<T>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
+  private async replaceCollection<T extends Document>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
     const db = await this.getDb()
     const collections = await db.listCollections().toArray()
     const previousCollectionName = `${collectionName}_previous`
@@ -114,6 +114,15 @@ export class MongoDbClient implements IDbClient {
 
   async replaceAccess(accesses: (DbAccess | NewAccess)[]): Promise<void> {
     await this.replaceCollection<DbAccess | NewAccess>(MONGODB.COLLECTIONS.ACCESS, accesses)
+  }
+
+  async getSchools(): Promise<DbSchool[]> {
+    const db = await this.getDb()
+    return await db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).find().toArray()
+  }
+
+  async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
+    await this.replaceCollection<DbSchool | NewSchool>(MONGODB.COLLECTIONS.SCHOOLS, schools)
   }
 }
 
