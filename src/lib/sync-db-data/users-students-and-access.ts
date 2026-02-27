@@ -54,32 +54,26 @@ const getValidGraphQlArray = <T, U>(input: StupidMaybeArray<T>, typeName: string
   return input.filter((item: T | null) => item !== null) as U
 }
 
-const isActive = (start: string, slutt: string | null | undefined): boolean => {
-  const now: Date = new Date()
-  const startDate: Date = new Date(start)
-
-  if (!slutt) {
-    return now > startDate
-  }
-
-  const sluttDate: Date = new Date(slutt)
-  return now > startDate && now < sluttDate
-}
-
 export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined): Period => {
   if (!periode) {
     return {
       start: null,
-      end: null,
-      active: false
+      end: null
     }
   }
 
   return {
-    start: periode.start && `${periode.start.substring(0, 11)}00:00:00.000Z`,
-    end: periode.slutt ? `${periode.slutt.substring(0, 11)}23:59:59.999Z` : null,
-    active: isActive(periode.start, periode.slutt)
+    start: periode.start.length > 10 ? new Date(`${periode.start.substring(0, 11)}00:00:00.000Z`) : new Date(`${periode.start}T00:00:00.000Z`),
+    end: periode.slutt ? (periode.slutt.length > 10 ? new Date(`${periode.slutt.substring(0, 11)}23:59:59.999Z`) : new Date(`${periode.slutt}T23:59:59.999Z`)) : null
   }
+}
+
+const cloneDbDocument = <T extends { _id: ObjectId }>(doc: T): T => {
+  const temp = {
+    ...doc,
+    _id: doc._id.toString()
+  }
+  return { ...structuredClone(temp), _id: new ObjectId(doc._id) }
 }
 
 export const updateUsersStudentsAndAccess = (
@@ -90,7 +84,7 @@ export const updateUsersStudentsAndAccess = (
   fintSchoolsWithStudents: FintSchoolWithStudents[],
   enterpriseApplicationUsers: User[]
 ): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[]; updatedSchools: (DbSchool | NewSchool)[] } => {
-  const syncTimestamp: string = new Date().toISOString()
+  const syncTimestamp: Date = new Date()
 
   const editorData: EditorData = {
     by: {
@@ -100,18 +94,17 @@ export const updateUsersStudentsAndAccess = (
     at: syncTimestamp
   }
 
-  const updatedAppUsers: (DbAppUser | NewAppUser)[] = JSON.parse(JSON.stringify(currentAppUsers))
+  const updatedAppUsers: (DbAppUser | NewAppUser)[] = currentAppUsers.map(cloneDbDocument)
   const linkedMockUsers: Record<string, string> = {}
 
-  const updatedStudents: (DbAppStudent | NewAppStudent)[] = JSON.parse(JSON.stringify(currentStudents))
+  const updatedStudents: (DbAppStudent | NewAppStudent)[] = currentStudents.map(cloneDbDocument)
 
   // wipe all previous student enrollments except manual, and set all students to inactive
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
     student.studentEnrollments = student.studentEnrollments.filter((enrollment) => enrollment.source === "MANUAL")
-    student.active = false
   })
 
-  const updatedAccess: (DbAccess | NewAccess)[] = JSON.parse(JSON.stringify(currentAccess))
+  const updatedAccess: (DbAccess | NewAccess)[] = currentAccess.map(cloneDbDocument)
   // wipe previous auto access
   updatedAccess.forEach((access: DbAccess | NewAccess) => {
     access.classes = access.classes.filter((entry) => entry.type !== "AUTOMATISK-KLASSE-TILGANG")
@@ -119,7 +112,13 @@ export const updateUsersStudentsAndAccess = (
     access.contactTeacherGroups = access.contactTeacherGroups.filter((entry) => entry.type !== "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")
   })
 
-  const updatedSchools: (DbSchool | NewSchool)[] = JSON.parse(JSON.stringify(currentSchools))
+  const updatedSchools: (DbSchool | NewSchool)[] = currentSchools.map(cloneDbDocument)
+
+  // Internal helper for checking if school comes from FINT
+  const fintSchools: SchoolInfo[] = fintSchoolsWithStudents.map((s) => ({
+    name: s.skole?.navn || "Ukjent skole",
+    schoolNumber: s.skole?.skolenummer.identifikatorverdi || "Ukjent skolenummer"
+  }))
 
   // Internal helper/repack functions - don't need state, so no class for now
   const upsertAppUser = (enterpriseApplicationUser: User) => {
@@ -403,43 +402,41 @@ export const updateUsersStudentsAndAccess = (
       }
 
       // Går gjennom klassemedlemskap for å oppdatere lærer-tilganger - deretter kontaklærergruppemedlemskap og undervisningsgruppemedlemskap
-      if (studentEnrollment.period.active) {
-        logger.info("Oppdaterer lærer-tilganger for elev {StudentName}", elev.person.navn.fornavn)
-        for (const classMembership of studentEnrollment.classMemberships.filter((cm) => cm.period.active)) {
-          for (const teacher of classMembership.classGroup.teachers) {
-            const accessEntry: ClassAutoAccessEntry = {
-              systemId: classMembership.classGroup.systemId,
-              schoolNumber: school.schoolNumber,
-              type: "AUTOMATISK-KLASSE-TILGANG",
-              granted: editorData,
-              source: "AUTO"
-            }
-            upsertTeacherAccess(teacher, accessEntry)
+      logger.info("Oppdaterer lærer-tilganger for elev {StudentName}", elev.person.navn.fornavn)
+      for (const classMembership of studentEnrollment.classMemberships) {
+        for (const teacher of classMembership.classGroup.teachers) {
+          const accessEntry: ClassAutoAccessEntry = {
+            systemId: classMembership.classGroup.systemId,
+            schoolNumber: school.schoolNumber,
+            type: "AUTOMATISK-KLASSE-TILGANG",
+            granted: editorData,
+            source: "AUTO"
           }
+          upsertTeacherAccess(teacher, accessEntry)
         }
-        for (const teachingGroupMembership of studentEnrollment.teachingGroupMemberships.filter((tgm) => tgm.period.active)) {
-          for (const teacher of teachingGroupMembership.teachingGroup.teachers) {
-            const accessEntry: TeachingGroupAutoAccessEntry = {
-              systemId: teachingGroupMembership.teachingGroup.systemId,
-              schoolNumber: school.schoolNumber,
-              type: "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG",
-              granted: editorData,
-              source: "AUTO"
-            }
-            upsertTeacherAccess(teacher, accessEntry)
+      }
+      for (const teachingGroupMembership of studentEnrollment.teachingGroupMemberships) {
+        for (const teacher of teachingGroupMembership.teachingGroup.teachers) {
+          const accessEntry: TeachingGroupAutoAccessEntry = {
+            systemId: teachingGroupMembership.teachingGroup.systemId,
+            schoolNumber: school.schoolNumber,
+            type: "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG",
+            granted: editorData,
+            source: "AUTO"
           }
+          upsertTeacherAccess(teacher, accessEntry)
         }
-        for (const contactTeacherGroupMembership of studentEnrollment.contactTeacherGroupMemberships.filter((ctgm) => ctgm.period.active)) {
-          for (const teacher of contactTeacherGroupMembership.contactTeacherGroup.teachers) {
-            const accessEntry: ContactTeacherGroupAutoAccessEntry = {
-              systemId: contactTeacherGroupMembership.contactTeacherGroup.systemId,
-              schoolNumber: school.schoolNumber,
-              type: "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG",
-              granted: editorData,
-              source: "AUTO"
-            }
-            upsertTeacherAccess(teacher, accessEntry)
+      }
+      for (const contactTeacherGroupMembership of studentEnrollment.contactTeacherGroupMemberships) {
+        for (const teacher of contactTeacherGroupMembership.contactTeacherGroup.teachers) {
+          const accessEntry: ContactTeacherGroupAutoAccessEntry = {
+            systemId: contactTeacherGroupMembership.contactTeacherGroup.systemId,
+            schoolNumber: school.schoolNumber,
+            type: "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG",
+            granted: editorData,
+            source: "AUTO"
           }
+          upsertTeacherAccess(teacher, accessEntry)
         }
       }
 
@@ -448,16 +445,12 @@ export const updateUsersStudentsAndAccess = (
       })
       if (!currentStudent) {
         currentStudent = {
-          active: false,
           systemId: elev.systemId.identifikatorverdi,
           studentNumber: elev.elevnummer.identifikatorverdi,
           feideName: elev.feidenavn.identifikatorverdi,
           ssn: elev.person.fodselsnummer.identifikatorverdi,
           name: `${elev.person.navn.fornavn} ${elev.person.navn.mellomnavn ? `${elev.person.navn.mellomnavn} ` : ""}${elev.person.navn.etternavn}`,
           studentEnrollments: [],
-          mainSchool: null,
-          mainClass: null,
-          mainContactTeacherGroup: null,
           created: editorData,
           modified: editorData,
           source: "AUTO"
@@ -476,9 +469,6 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
-        currentStudent.mainClass ??= null
-        currentStudent.mainSchool ??= null
-        currentStudent.mainContactTeacherGroup ??= null
       }
       currentStudent.studentEnrollments.push(studentEnrollment)
     }
@@ -497,38 +487,39 @@ export const updateUsersStudentsAndAccess = (
       return
     }
 
-    // Set manual enrollments to inactive if there is at least one AUTO enrollment for the same school, set to active if there is no active AUTO enrollment for the school
-    const schoolsWithAutoEnrollment = student.studentEnrollments.filter((enrollment) => enrollment.period.active && enrollment.source === "AUTO").map((enrollment) => enrollment.school.schoolNumber)
+    // Set manual enrollments to expire when auto enrollment begins if there is at least one AUTO enrollment for the same school
+    const existingAutoEnrollmentSchools = student.studentEnrollments.filter((enrollment) => enrollment.source === "AUTO").map((enrollment) => enrollment.school.schoolNumber)
+    const now = new Date()
     student.studentEnrollments.forEach((enrollment) => {
       if (enrollment.source !== "MANUAL") {
         return
       }
-      if (schoolsWithAutoEnrollment.includes(enrollment.school.schoolNumber)) {
-        enrollment.period.active = false
+
+      if (enrollment.period.end && enrollment.period.end < now) {
+        if (enrollment.mainSchool) {
+          logger.warn(
+            "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til manuelt elevforhold.mainSchool til false, da det finnes et automatisk elevforhold for samme skole - evt endringer på denne skolen for denne eleven må nå gjøres i FINT",
+            student.name,
+            enrollment.school.schoolNumber
+          )
+          enrollment.mainSchool = false
+        }
+        return
+      }
+
+      if (existingAutoEnrollmentSchools.includes(enrollment.school.schoolNumber)) {
+        enrollment.period.end = now
+        enrollment.mainSchool = false
         logger.warn(
-          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til inactive, da det finnes et automatisk elevforhold for samme skole",
+          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til å gå ut NÅ og setter manuelt elevforhold.mainSchool til false, da det finnes et automatisk elevforhold for samme skole - evt endringer på denne skolen for denne eleven må nå gjøres i FINT",
           student.name,
           enrollment.school.schoolNumber
         )
         return
       }
-      if (!enrollment.period.active) {
-        logger.warn(
-          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til active, da det ikke finnes et aktivt automatisk elevforhold for samme skole",
-          student.name,
-          enrollment.school.schoolNumber
-        )
-        enrollment.period.active = true
-      }
     })
 
-    // Set student active status based on at least one active enrollment
-    student.active = student.studentEnrollments.some((enrollment) => enrollment.period.active)
-    if (!student.active) {
-      return
-    }
-
-    // Check if this i a new school - add it to updatedSchools if it doesn't exist already
+    // Check if this i a new school - add it to updatedSchools if it doesn't exist already (AUTO if it comes from FINT, MANUAL if it for some weird reason doesn't)
     student.studentEnrollments.forEach((enrollment) => {
       if (!updatedSchools.some((school) => school.schoolNumber === enrollment.school.schoolNumber)) {
         updatedSchools.push({
@@ -536,52 +527,13 @@ export const updateUsersStudentsAndAccess = (
           schoolNumber: enrollment.school.schoolNumber,
           created: editorData,
           modified: editorData,
-          source: "AUTO"
+          source: fintSchools.some((fintSchool) => fintSchool.schoolNumber === enrollment.school.schoolNumber) ? "AUTO" : "MANUAL"
         })
       }
     })
 
-    const mainEnrollment = student.studentEnrollments.find((enrollment) => enrollment.mainSchool && enrollment.period.active)
-    if (!mainEnrollment) {
-      logger.warn("Fant ingen main school for elev {studentName} {feideName} med aktive elevforhold", student.name, student.feideName)
-      return
-    }
-    student.mainSchool = {
-      ...mainEnrollment.school,
-      enrollmentSystemId: mainEnrollment.systemId
-    }
-    const mainClassMembership = mainEnrollment.classMemberships.find((cm) => cm.period.active)
-    if (mainClassMembership) {
-      student.mainClass = {
-        name: mainClassMembership.classGroup.name,
-        systemId: mainClassMembership.classGroup.systemId,
-        source: mainClassMembership.classGroup.source
-      }
-    }
-    const mainContactTeacherGroupMembership = mainEnrollment.contactTeacherGroupMemberships.find((ctgm) => ctgm.period.active)
-    if (mainContactTeacherGroupMembership) {
-      student.mainContactTeacherGroup = mainContactTeacherGroupMembership.contactTeacherGroup
-    }
-  })
-
-  updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
-    // Set _id to ObjectId again (removed by JSON.parse/stringify)
-    if ("_id" in appUser) {
-      appUser._id = new ObjectId(appUser._id)
-    }
-  })
-
-  updatedAccess.forEach((access: DbAccess | NewAccess) => {
-    // Set _id to ObjectId again (removed by JSON.parse/stringify)
-    if ("_id" in access) {
-      access._id = new ObjectId(access._id)
-    }
-  })
-
-  updatedSchools.forEach((school: DbSchool | NewSchool) => {
-    // Set _id to ObjectId again (removed by JSON.parse/stringify)
-    if ("_id" in school) {
-      school._id = new ObjectId(school._id)
+    if (student.studentEnrollments.filter((enrollment) => enrollment.mainSchool).length > 1) {
+      logger.warn("Fant flere enn elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
     }
   })
 

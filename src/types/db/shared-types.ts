@@ -70,9 +70,8 @@ export type DbSchool = NewSchool & {
 }
 
 export type Period = {
-  start: string | null
-  end: string | null
-  active: boolean
+  start: Date | null
+  end: Date | null
 }
 
 /** Elevforhold */
@@ -97,16 +96,11 @@ export type Source = "AUTO" | "MANUAL"
 export type NewAppStudent = {
   /** FINT system-id for eleven */
   systemId: string
-  /** Om eleven har et aktivt elevforhold */
-  active: boolean
   studentNumber: string
   ssn: string
   name: string
   feideName: string
   studentEnrollments: StudentEnrollment[]
-  mainSchool: MainSchool | null
-  mainClass: Group | null
-  mainContactTeacherGroup: ContactTeacherGroup | null
   created: EditorData
   modified: EditorData
   source: Source
@@ -285,7 +279,7 @@ export type EditorData = {
     fallbackName: string
     displayName?: string
   }
-  at: string
+  at: Date
 }
 
 export type DocumentMessageBase = {

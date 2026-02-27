@@ -5,9 +5,17 @@ import { ObjectId } from "mongodb"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAccess, NewAppUser, NewSchool } from "../../src/types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAccess, NewAppUser, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
-import type { FintElev, FintKlassemedlemskap, FintKontaktlarergruppemedlemskap, FintSchoolWithStudents, FintUndervisningsgruppemedlemskap } from "../../src/types/fint/fint-school-with-students.js"
+import type {
+  FintElev,
+  FintElevforhold,
+  FintGyldighetsPeriode,
+  FintKlassemedlemskap,
+  FintKontaktlarergruppemedlemskap,
+  FintSchoolWithStudents,
+  FintUndervisningsgruppemedlemskap
+} from "../../src/types/fint/fint-school-with-students.js"
 
 const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
@@ -19,8 +27,6 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const classToCheck: FintKlassemedlemskap | null | undefined = ef?.klassemedlemskap?.find((km) => km?.klasse.systemId.identifikatorverdi === classAccess.systemId)
       if (!classToCheck) return false
-      if (!repackPeriode(ef?.gyldighetsperiode).active) return false
-      if (!repackPeriode(classToCheck.gyldighetsperiode).active) return false
       return classToCheck.klasse.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
@@ -40,8 +46,6 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
         (km) => km?.undervisningsgruppe?.systemId?.identifikatorverdi === groupAccess.systemId
       )
       if (!groupToCheck) return false
-      if (!repackPeriode(ef?.gyldighetsperiode).active) return false
-      if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
       return groupToCheck.undervisningsgruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
@@ -61,8 +65,6 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
         (km) => km?.kontaktlarergruppe.systemId.identifikatorverdi === groupAccess.systemId
       )
       if (!groupToCheck) return false
-      if (!repackPeriode(ef?.gyldighetsperiode).active) return false
-      if (!repackPeriode(groupToCheck.gyldighetsperiode).active) return false
       return groupToCheck.kontaktlarergruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
@@ -77,7 +79,7 @@ const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: Fi
 }
 
 const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[], updatedSchools: (DbSchool | NewSchool)[]): { valid: boolean; reason: string } => {
-  for (const enrollment of student.studentEnrollments) {
+  for (const enrollment of student.studentEnrollments.filter((enrollment) => enrollment.source === "AUTO")) {
     const school = schoolsWithStudents.find((s) => s.skole?.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
     if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
 
@@ -85,18 +87,14 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!enrollmentInFint) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
     if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
     if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
-    if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber)
+    if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber) {
       return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
-
-    const repackedPeriode = repackPeriode(enrollmentInFint.gyldighetsperiode)
-    if (repackedPeriode.active !== enrollment.period.active) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched active status` }
-
-    if (repackedPeriode.active) {
-      const schoolInUpdatedSchools = updatedSchools.find((s) => s.schoolNumber === enrollment.school.schoolNumber)
-      if (!schoolInUpdatedSchools)
-        return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found in updated schools, but student-enrollment is active at this school` }
     }
 
+    const schoolInUpdatedSchools = updatedSchools.find((s) => s.schoolNumber === enrollment.school.schoolNumber)
+    if (!schoolInUpdatedSchools) {
+      return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found in updated schools, but student-enrollment is active at this school` }
+    }
     const allClassesPresent = enrollmentInFint.klassemedlemskap?.every((km) => {
       return enrollment.classMemberships.some((cm) => cm.systemId === km?.systemId.identifikatorverdi)
     })
@@ -111,53 +109,6 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
   }
 
-  if (student.mainSchool) {
-    const mainSchoolInFint = schoolsWithStudents.find((s) => s.skole?.skolenummer.identifikatorverdi === student.mainSchool?.schoolNumber)
-    if (!mainSchoolInFint) {
-      return { valid: false, reason: `Main school specified for student but corresponding enrollment not found for any school in FINT data` }
-    }
-    const mainEnrollmentInFint = mainSchoolInFint.skole?.elevforhold?.find(
-      (ef) => ef?.systemId.identifikatorverdi === student.mainSchool?.enrollmentSystemId && repackPeriode(ef?.gyldighetsperiode).active
-    )
-    if (!mainEnrollmentInFint) {
-      return { valid: false, reason: `Main school specified for student but corresponding enrollment not found in FINT data` }
-    }
-
-    if (student.mainClass) {
-      const mainClassMembershipInFint = mainEnrollmentInFint.klassemedlemskap?.find((km) => km?.klasse.systemId.identifikatorverdi === student.mainClass?.systemId)
-      if (!mainClassMembershipInFint) {
-        return {
-          valid: false,
-          reason: `Main class specified for student (mainClass.systemId=${student.mainClass?.systemId}) but corresponding class membership not found in FINT data (mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
-        }
-      }
-      if (repackPeriode(mainClassMembershipInFint.gyldighetsperiode).active !== repackPeriode(mainEnrollmentInFint.gyldighetsperiode).active) {
-        return {
-          valid: false,
-          reason: `Main class membership active status does not match main enrollment active status (mainClass.systemId=${student.mainClass?.systemId}, mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
-        }
-      }
-    }
-
-    if (student.mainContactTeacherGroup) {
-      const mainContactTeacherGroupMembershipInFint = mainEnrollmentInFint.kontaktlarergruppemedlemskap?.find(
-        (cgm) => cgm?.kontaktlarergruppe.systemId.identifikatorverdi === student.mainContactTeacherGroup?.systemId
-      )
-      if (!mainContactTeacherGroupMembershipInFint) {
-        return {
-          valid: false,
-          reason: `Main contact teacher group specified for student (mainContactTeacherGroup.systemId=${student.mainContactTeacherGroup?.systemId}) but corresponding contact teacher group membership not found in FINT data (mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
-        }
-      }
-      if (repackPeriode(mainContactTeacherGroupMembershipInFint.gyldighetsperiode).active !== repackPeriode(mainEnrollmentInFint.gyldighetsperiode).active) {
-        return {
-          valid: false,
-          reason: `Main contact teacher group membership active status does not match main enrollment active status (mainContactTeacherGroup.systemId=${student.mainContactTeacherGroup?.systemId}, mainEnrollmentInFint.systemId=${mainEnrollmentInFint.systemId.identifikatorverdi})`
-        }
-      }
-    }
-  }
-
   return { valid: true, reason: "" }
 }
 
@@ -166,54 +117,37 @@ const testEditor: EditorData = {
     entraUserId: "test",
     fallbackName: "Test User"
   },
-  at: new Date().toISOString()
+  at: new Date()
 }
 
 describe("repackPeriode", () => {
-  it("should return active true for periode with no end date", () => {
-    const periode = { start: "2020-01-01" }
+  it("should return correct start date for periode with no end date", () => {
+    const periode: FintGyldighetsPeriode = { start: "2020-01-01" }
     const repacked = repackPeriode(periode)
-    assert(repacked.active === true, `Expected active true, got ${repacked.active}`)
+    assert(repacked.start?.getTime() === new Date(periode.start).getTime(), `Expected start date ${periode.start}, got ${repacked.start}`)
   })
 
-  it("should return active false for periode with end date in the past", () => {
-    const periode = { start: "2020-01-01", slutt: "2020-12-31" }
+  it("should return correct start and end date for periode with end date", () => {
+    const periode: FintGyldighetsPeriode = { start: "2020-01-01", slutt: "2020-12-31" }
     const repacked = repackPeriode(periode)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
+    assert(repacked.start?.getTime() === new Date(periode.start).getTime(), `Expected start date ${periode.start}, got ${repacked.start}`)
+    assert(repacked.end?.getTime() === new Date("2020-12-31T23:59:59.999Z").getTime(), `Expected end date ${periode.slutt}, got ${repacked.end}`)
   })
 
-  it("should return active false for periode with start date in the future", () => {
-    const periode = { start: "2999-01-01" }
-    const repacked = repackPeriode(periode)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
-  })
-
-  it("should return active false for periode when periode is null", () => {
-    const repacked = repackPeriode(null)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
-  })
-
-  it("should return active false for periode when periode is undefined", () => {
+  it("should return start and end null for missing periode", () => {
     const repacked = repackPeriode(undefined)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
+    assert(repacked.start === null, `Expected start date to be null, got ${repacked.start}`)
+    assert(repacked.end === null, `Expected end date to be null, got ${repacked.end}`)
+    const repacked2 = repackPeriode(null)
+    assert(repacked2.start === null, `Expected start date to be null, got ${repacked2.start}`)
+    assert(repacked2.end === null, `Expected end date to be null, got ${repacked2.end}`)
   })
 
-  it("should return active false when start is not a valid date", () => {
-    const periode = { start: "not-a-date-string" }
+  it("should convert start dates to start at 00:00:00 and end dates to end at 23:59:59", () => {
+    const periode: FintGyldighetsPeriode = { start: "2020-01-01T12:34:56", slutt: "2020-12-31T23:45:01" }
     const repacked = repackPeriode(periode)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
-  })
-
-  it("should return active false when slutt is not a valid date", () => {
-    const periode = { start: "2022-01-01", slutt: "not-a-date-string" }
-    const repacked = repackPeriode(periode)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
-  })
-
-  it("should return active false when end is before start", () => {
-    const periode = { start: "2022-01-01", slutt: "2021-01-01" }
-    const repacked = repackPeriode(periode)
-    assert(repacked.active === false, `Expected active false, got ${repacked.active}`)
+    assert(repacked.start?.getTime() === new Date("2020-01-01T00:00:00.000Z").getTime(), `Expected start date to be 2020-01-01T00:00:00, got ${repacked.start}`)
+    assert(repacked.end?.getTime() === new Date("2020-12-31T23:59:59.999Z").getTime(), `Expected end date to be 2020-12-31T23:59:59, got ${repacked.end}`)
   })
 })
 
@@ -273,8 +207,10 @@ describe("sync-db-data/users-students-and-access", () => {
       }
     ]
 
-    const getRandomElev = (exclude: FintElev[]): FintElev => {
+    const getRandomElev = (exclude: FintElev[]): { elev: FintElev; elevforhold: FintElevforhold; skole: SchoolInfo } => {
       let elev: FintElev | undefined
+      let elevforhold: FintElevforhold
+      let skole: SchoolInfo
       const maxAttempts = 100
       let attempts = 0
       while (
@@ -292,31 +228,89 @@ describe("sync-db-data/users-students-and-access", () => {
         const schoolIndex = Math.floor(Math.random() * mockSchools.length)
         const school = mockSchools[schoolIndex]
         const elevforholdIndex = Math.floor(Math.random() * (school.skole?.elevforhold?.length || 0))
+        const enrollment = school.skole?.elevforhold?.[elevforholdIndex]
         elev = school.skole?.elevforhold?.[elevforholdIndex]?.elev
+        if (elev && enrollment && school.skole) {
+          skole = {
+            schoolNumber: school.skole.skolenummer.identifikatorverdi,
+            name: school.skole.navn
+          }
+          elevforhold = enrollment
+        } else {
+          elev = undefined
+        }
         attempts++
       }
-      return elev
+      // @ts-expect-error - we check this in the while loop
+      return { elev, elevforhold, skole }
     }
 
-    const studentNameUpdate = getRandomElev([])
+    const manualStudentSuddenlyInFint = getRandomElev([])
+    if (!manualStudentSuddenlyInFint) throw new Error("Mock data generation failed, manualStudentSuddenlyInFint not found")
+    // ManualStudentSuddenlyInFint har et aktivt elevforhold, lager et manuelt elevforhold på samme skole som vi definerer nedenfor, for å teste at det manuelle elevforholdet blir satt til inaktivt.
+
+    const studentNameUpdate = getRandomElev([manualStudentSuddenlyInFint.elev]).elev
     if (!studentNameUpdate) throw new Error("Mock data generation failed, no students found")
-    const studentSsnUpdate = getRandomElev([studentNameUpdate])
+    const studentSsnUpdate = getRandomElev([studentNameUpdate]).elev
     if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
-    const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate])
+    const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate]).elev
     if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
+    const studentWithManualEnrollment = getRandomElev([studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate]).elev
+    if (!studentWithManualEnrollment) throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
+
+    const baseCurrentStudent: DbAppStudent = {
+      _id: new ObjectId(),
+      feideName: "whatever",
+      name: "Et navn",
+      ssn: "12345678910",
+      created: testEditor,
+      modified: testEditor,
+      source: "AUTO",
+      studentEnrollments: [],
+      studentNumber: "S12345",
+      systemId: "noe"
+    }
 
     const currentStudents: DbAppStudent[] = [
       {
+        ...baseCurrentStudent,
         _id: new ObjectId(),
-        feideName: studentNameUpdate.feidenavn?.identifikatorverdi || "whatever",
-        active: false,
+        feideName: "manuell løk",
+        systemId: "manuell-løk-id",
+        ssn: manualStudentSuddenlyInFint.elev.person.fodselsnummer.identifikatorverdi,
+        source: "MANUAL", // TODO oppdateres denne da? Skal vi oppdatere den i det hele tatt? Ja, hvis den dukker opp i FINT, er den ikke MANUAL lenger, og da bør source oppdateres.
+        studentEnrollments: [
+          {
+            school: {
+              schoolNumber: manualStudentSuddenlyInFint.skole.schoolNumber,
+              name: manualStudentSuddenlyInFint.skole.name
+            },
+            classMemberships: [
+              {
+                systemId: "et-klassemedlemskap-som-skal-bli-inaktivt",
+                period: { start: new Date("2020-01-01T00:00:00"), end: null },
+                classGroup: {
+                  systemId: "en-klasse-som-skal-bli-inaktivt",
+                  name: "En klasse som skal bli inaktiv",
+                  source: "MANUAL",
+                  teachers: []
+                }
+              }
+            ],
+            contactTeacherGroupMemberships: [],
+            teachingGroupMemberships: [],
+            mainSchool: true,
+            period: { start: new Date("2020-01-01T00:00:00"), end: null },
+            systemId: "manual-elevforhold-som-skal-bli-inaktivt",
+            source: "MANUAL"
+          }
+        ]
+      },
+      {
+        ...baseCurrentStudent,
+        _id: new ObjectId(),
         name: "Et navn som skal oppdateres",
         ssn: studentNameUpdate.person.fodselsnummer.identifikatorverdi,
-        mainSchool: null,
-        mainClass: null,
-        mainContactTeacherGroup: null,
-        created: testEditor,
-        modified: testEditor,
         source: "AUTO",
         studentEnrollments: [
           {
@@ -329,102 +323,69 @@ describe("sync-db-data/users-students-and-access", () => {
             teachingGroupMemberships: [],
             contactTeacherGroupMemberships: [],
             mainSchool: true,
-            period: { start: "2020-01-01", end: null, active: true },
+            period: { start: new Date("2020-01-01T00:00:00"), end: null },
             source: "AUTO"
           }
         ],
-        studentNumber: "S12345",
         systemId: studentNameUpdate.systemId.identifikatorverdi
       },
       {
+        ...baseCurrentStudent,
         _id: new ObjectId(),
-        feideName: studentSsnUpdate.feidenavn?.identifikatorverdi || "whatever2",
-        active: false,
-        name: "Et navn som skal oppdateres",
         ssn: "oppdater meg",
-        mainSchool: null,
-        mainClass: null,
-        mainContactTeacherGroup: null,
-        created: testEditor,
-        modified: testEditor,
         source: "AUTO",
-        studentEnrollments: [
-          {
-            school: {
-              schoolNumber: "69",
-              name: "En skole som ikke skal brukes"
-            },
-            systemId: "elevforhold-som-skal-fjernes",
-            classMemberships: [],
-            teachingGroupMemberships: [],
-            contactTeacherGroupMemberships: [],
-            mainSchool: true,
-            period: { start: "2020-01-01", end: null, active: true },
-            source: "AUTO"
-          }
-        ],
-        studentNumber: "S12345",
         systemId: studentSsnUpdate.systemId.identifikatorverdi
       },
       {
+        ...baseCurrentStudent,
         _id: new ObjectId(),
-        feideName: studentSystemIdUpdate.feidenavn?.identifikatorverdi || "whatever3",
-        active: false,
-        name: "Et navn som skal oppdateres",
         ssn: studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi,
-        mainSchool: null,
-        mainClass: null,
-        mainContactTeacherGroup: null,
-        created: testEditor,
-        modified: testEditor,
         source: "AUTO",
-        studentEnrollments: [
-          {
-            school: {
-              schoolNumber: "69",
-              name: "En skole som ikke skal brukes"
-            },
-            systemId: "elevforhold-som-skal-fjernes",
-            classMemberships: [],
-            teachingGroupMemberships: [],
-            contactTeacherGroupMemberships: [],
-            mainSchool: true,
-            period: { start: "2020-01-01", end: null, active: true },
-            source: "AUTO"
-          }
-        ],
         studentNumber: "S12345",
         systemId: "oppdater-meg"
       },
       {
+        ...baseCurrentStudent,
         _id: new ObjectId(),
         feideName: "jeg-finnes-ikke-i-fint-lenger",
-        active: true,
         name: "Et navn som ikke skal oppdateres",
-        ssn: "12345678911",
-        mainSchool: null,
-        mainClass: null,
-        mainContactTeacherGroup: null,
-        created: testEditor,
-        modified: testEditor,
+        ssn: "12345678911finnesforhåpentligvis-ikke",
+        source: "AUTO",
+        systemId: "jeg-finnes-ikke-i-fint-lenger"
+      },
+      {
+        ...baseCurrentStudent,
+        _id: new ObjectId(),
+        feideName: studentWithManualEnrollment.feidenavn?.identifikatorverdi || "manual.student",
+        systemId: studentWithManualEnrollment.systemId.identifikatorverdi,
+        ssn: studentWithManualEnrollment.person.fodselsnummer.identifikatorverdi,
         source: "AUTO",
         studentEnrollments: [
           {
-            systemId: "elevforhold-som-skal-fjernes-2",
             school: {
-              schoolNumber: "69",
-              name: "En skole som ikke skal brukes"
+              schoolNumber: "420-super-manuell",
+              name: "En skole"
             },
-            classMemberships: [],
-            teachingGroupMemberships: [],
+            classMemberships: [
+              {
+                systemId: "et-klassemedlemskap-som-skal-bestå",
+                period: { start: new Date("2020-01-01T00:00:00"), end: null },
+                classGroup: {
+                  systemId: "en-klasse-som-skal-bestå",
+                  name: "En klasse som skal bestå",
+                  source: "MANUAL",
+                  teachers: []
+                }
+              }
+            ],
             contactTeacherGroupMemberships: [],
+            teachingGroupMemberships: [],
             mainSchool: true,
-            period: { start: "2020-01-01", end: null, active: true },
-            source: "AUTO"
+            period: { start: new Date("2020-01-01T00:00:00"), end: null },
+            systemId: "manual-elevforhold",
+            source: "MANUAL"
           }
-        ],
-        studentNumber: "S12345",
-        systemId: "jeg-finnes-ikke-i-fint-lenger"
+        ]
       }
     ]
 
@@ -507,6 +468,18 @@ describe("sync-db-data/users-students-and-access", () => {
       }
     })
 
+    it("should preserve manual enrollments and set them to inactive when student suddenly appears in FINT with active enrollment at the same school", () => {
+      const updatedStudent = result.updatedStudents.find((s) => s.systemId === manualStudentSuddenlyInFint.elev.systemId.identifikatorverdi)
+      assert(updatedStudent, "Updated student not found")
+      const manualEnrollment = updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold-som-skal-bli-inaktivt")
+      assert(manualEnrollment, "Manual enrollment not found")
+      assert(manualEnrollment.period.end !== null, "Expected manual enrollment to have an end date after being set to inactive")
+      assert(manualEnrollment.period.end && manualEnrollment.period.end < new Date(), `Expected manual enrollment to be set to inactive, got end=${manualEnrollment.period.end}`)
+      assert(manualEnrollment.classMemberships.length === 1, `Expected manual enrollment to still have class memberships, got ${manualEnrollment.classMemberships.length}`)
+      assert(manualEnrollment.mainSchool === false, `Expected manual enrollment mainSchool to be set to false, got ${manualEnrollment.mainSchool}`)
+      assert(updatedStudent.source === "AUTO", `Expected student source to be updated to AUTO, got ${updatedStudent.source}`)
+    })
+
     it("should update existing student name and student number correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentNameUpdate.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
@@ -539,12 +512,20 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should deactivate students and remove enrollments when student is no longer in FINT", () => {
+    it("should remove auto enrollments when student is no longer in FINT", () => {
       const deactivatedStudent = result.updatedStudents.find((s) => s.systemId === "jeg-finnes-ikke-i-fint-lenger")
       assert(deactivatedStudent, "Deactivated student not found")
-      assert(deactivatedStudent.active === false, `Expected student to be inactive, got active=${deactivatedStudent.active}`)
       assert(deactivatedStudent.name === "Et navn som ikke skal oppdateres", `Expected student name to be unchanged, got "${deactivatedStudent.name}"`)
       assert(!deactivatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes-2"), "Expected enrollment to be removed")
+    })
+
+    it("should preserve manual enrollments and related access when student is still in FINT", () => {
+      const student = result.updatedStudents.find((s) => s.feideName === studentWithManualEnrollment.feidenavn?.identifikatorverdi)
+      assert(student, "Student with manual enrollment not found")
+      assert(
+        student.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold"),
+        "Expected manual enrollment to be preserved"
+      )
     })
 
     it("should update existing access correctly", () => {
