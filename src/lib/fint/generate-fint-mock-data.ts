@@ -338,7 +338,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
 
       schools.push(schoolToAdd)
     } else {
-      logger.error("Fikk ikke skole-data for skole @{School}, hopper over", schoolToAdd)
+      logger.error("Fikk ikke skole-data for skole {@School}, hopper over", schoolToAdd)
     }
   })
 
