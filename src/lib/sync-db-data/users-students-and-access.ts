@@ -540,7 +540,7 @@ export const updateUsersStudentsAndAccess = (
     })
 
     if (student.studentEnrollments.filter((enrollment) => enrollment.mainSchool).length > 1) {
-      logger.warn("Fant flere enn elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
+      logger.warn("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
     }
 
     // Set mainEnrollment to be the first enrollment with mainSchool true, or null
