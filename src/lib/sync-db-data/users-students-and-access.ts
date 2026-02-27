@@ -356,7 +356,7 @@ export const updateUsersStudentsAndAccess = (
   logger.info("Starter synk av elever og tilganger basert på FINT-data")
   for (const schoolWithStudents of fintSchoolsWithStudents) {
     if (!schoolWithStudents.skole) {
-      logger.error("Fikk ikke skole-data for skole @{School}, hopper over", schoolWithStudents)
+      logger.error("Fikk ikke skole-data for skole {@School}, hopper over", schoolWithStudents)
       continue
     }
 
