@@ -109,6 +109,13 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
   }
 
+  if (student.mainEnrollment?.source === "AUTO") {
+    const mainEnrollmentInFint = schoolsWithStudents
+      .find((s) => s.skole?.skolenummer.identifikatorverdi === student.mainEnrollment?.school.schoolNumber)
+      ?.skole?.elevforhold?.find((ef) => ef?.systemId.identifikatorverdi === student.mainEnrollment?.systemId)
+    if (mainEnrollmentInFint?.hovedskole !== true) return { valid: false, reason: `Main enrollment with system ID ${student.mainEnrollment.systemId} does not have mainSchool true in FINT` }
+  }
+
   return { valid: true, reason: "" }
 }
 
@@ -255,8 +262,9 @@ describe("sync-db-data/users-students-and-access", () => {
     if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
     const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate]).elev
     if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
-    const studentWithManualEnrollment = getRandomElev([studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate]).elev
+    const studentWithManualEnrollment = getRandomElev([studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
     if (!studentWithManualEnrollment) throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
+    studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainschool false
 
     const baseCurrentStudent: DbAppStudent = {
       _id: new ObjectId(),
@@ -267,6 +275,7 @@ describe("sync-db-data/users-students-and-access", () => {
       modified: testEditor,
       source: "AUTO",
       studentEnrollments: [],
+      mainEnrollment: null,
       studentNumber: "S12345",
       systemId: "noe"
     }
@@ -356,9 +365,9 @@ describe("sync-db-data/users-students-and-access", () => {
       {
         ...baseCurrentStudent,
         _id: new ObjectId(),
-        feideName: studentWithManualEnrollment.feidenavn?.identifikatorverdi || "manual.student",
-        systemId: studentWithManualEnrollment.systemId.identifikatorverdi,
-        ssn: studentWithManualEnrollment.person.fodselsnummer.identifikatorverdi,
+        feideName: studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi || "manual.student",
+        systemId: studentWithManualEnrollment.elev.systemId.identifikatorverdi,
+        ssn: studentWithManualEnrollment.elev.person.fodselsnummer.identifikatorverdi,
         source: "AUTO",
         studentEnrollments: [
           {
@@ -520,12 +529,12 @@ describe("sync-db-data/users-students-and-access", () => {
     })
 
     it("should preserve manual enrollments and related access when student is still in FINT", () => {
-      const student = result.updatedStudents.find((s) => s.feideName === studentWithManualEnrollment.feidenavn?.identifikatorverdi)
+      const student = result.updatedStudents.find((s) => s.feideName === studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi)
       assert(student, "Student with manual enrollment not found")
-      assert(
-        student.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold"),
-        "Expected manual enrollment to be preserved"
-      )
+      const manualEnrollment = student.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold")
+      assert(manualEnrollment, "Expected manual enrollment to be preserved")
+      assert(manualEnrollment.classMemberships.length === 1, "Expected class memberships of manual enrollment to be preserved")
+      assert(manualEnrollment.mainSchool === false, "Expected mainSchool of manual enrollment to be set to false, but got true")
     })
 
     it("should update existing access correctly", () => {
