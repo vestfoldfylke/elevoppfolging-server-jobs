@@ -372,7 +372,7 @@ export type NewStudentImportantStuff = ImportantStuffBase & {
   type: "STUDENT"
   followUp: string[]
   facilitation: string[]
-  lastActivityTimestamp: string
+  lastActivityTimestamp: Date
 }
 
 export type StudentImportantStuff = NewStudentImportantStuff & {
