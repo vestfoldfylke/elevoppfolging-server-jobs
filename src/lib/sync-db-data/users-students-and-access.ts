@@ -451,6 +451,7 @@ export const updateUsersStudentsAndAccess = (
           ssn: elev.person.fodselsnummer.identifikatorverdi,
           name: `${elev.person.navn.fornavn} ${elev.person.navn.mellomnavn ? `${elev.person.navn.mellomnavn} ` : ""}${elev.person.navn.etternavn}`,
           studentEnrollments: [],
+          mainEnrollment: null,
           created: editorData,
           modified: editorData,
           source: "AUTO"
@@ -469,6 +470,7 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
+        currentStudent.mainEnrollment ??= null // haha
       }
       currentStudent.studentEnrollments.push(studentEnrollment)
     }
@@ -487,27 +489,32 @@ export const updateUsersStudentsAndAccess = (
       return
     }
 
-    // Set manual enrollments to expire when auto enrollment begins if there is at least one AUTO enrollment for the same school
-    const existingAutoEnrollmentSchools = student.studentEnrollments.filter((enrollment) => enrollment.source === "AUTO").map((enrollment) => enrollment.school.schoolNumber)
+    // Set manual enrollments to expire if there is at least one AUTO enrollment for the same school, and set mainSchool to false on manual enrollments if there is an auto enrollment for any school with mainschool true
+    const existingAutoEnrollmentSchools = student.studentEnrollments
+      .filter((enrollment) => enrollment.source === "AUTO")
+      .map((enrollment) => {
+        return { schoolNumber: enrollment.school.schoolNumber, mainSchool: enrollment.mainSchool }
+      })
     const now = new Date()
     student.studentEnrollments.forEach((enrollment) => {
       if (enrollment.source !== "MANUAL") {
         return
       }
 
+      if (enrollment.mainSchool && existingAutoEnrollmentSchools.some((autoEnrollment) => autoEnrollment.mainSchool)) {
+        logger.warn(
+          "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til manuelt elevforhold.mainSchool til false, da det finnes et automatisk elevforhold for en FINT-skole som har mainSchool true.",
+          student.name,
+          enrollment.school.schoolNumber
+        )
+        enrollment.mainSchool = false
+      }
+
       if (enrollment.period.end && enrollment.period.end < now) {
-        if (enrollment.mainSchool) {
-          logger.warn(
-            "Setter manuell elevforhold for elev {StudentName} ved skole {SchoolNumber} til manuelt elevforhold.mainSchool til false, da det finnes et automatisk elevforhold for samme skole - evt endringer på denne skolen for denne eleven må nå gjøres i FINT",
-            student.name,
-            enrollment.school.schoolNumber
-          )
-          enrollment.mainSchool = false
-        }
         return
       }
 
-      if (existingAutoEnrollmentSchools.includes(enrollment.school.schoolNumber)) {
+      if (existingAutoEnrollmentSchools.some((autoEnrollment) => autoEnrollment.schoolNumber === enrollment.school.schoolNumber)) {
         enrollment.period.end = now
         enrollment.mainSchool = false
         logger.warn(
@@ -533,8 +540,11 @@ export const updateUsersStudentsAndAccess = (
     })
 
     if (student.studentEnrollments.filter((enrollment) => enrollment.mainSchool).length > 1) {
-      logger.warn("Fant flere enn elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
+      logger.warn("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
     }
+
+    // Set mainEnrollment to be the first enrollment with mainSchool true, or null
+    student.mainEnrollment = student.studentEnrollments.find((enrollment) => enrollment.mainSchool) || null
   })
 
   logger.info("Ferdig med synk av elever og tilganger basert på FINT-data")

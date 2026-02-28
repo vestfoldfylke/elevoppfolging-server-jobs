@@ -101,6 +101,8 @@ export type NewAppStudent = {
   name: string
   feideName: string
   studentEnrollments: StudentEnrollment[]
+  /** FINT-elevforholdet som har hovedskole true */
+  mainEnrollment: StudentEnrollment | null
   created: EditorData
   modified: EditorData
   source: Source
