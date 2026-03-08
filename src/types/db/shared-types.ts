@@ -100,9 +100,8 @@ export type NewAppStudent = {
   ssn: string
   name: string
   feideName: string
+  /** Alle FINT elevforholdene til eleven */
   studentEnrollments: StudentEnrollment[]
-  /** FINT-elevforholdet som har hovedskole true */
-  mainEnrollment: StudentEnrollment | null
   created: EditorData
   modified: EditorData
   source: Source
@@ -135,8 +134,8 @@ export type ProgramAreaManualAccessEntry = AccessEntryBase & {
 }
 
 export type StudentManualAccessEntry = AccessEntryBase & {
-  /** FINT system-id for eleven det er gitt tilgang til */
-  systemId: string
+  /** db _id for eleven det er gitt tilgang til */
+  _id: string
   type: "MANUELL-ELEV-TILGANG"
 }
 
@@ -368,6 +367,7 @@ export type ImportantStuffBase = {
   created: EditorData
   modified: EditorData
   importantInfo: string
+  school: SchoolInfo
 }
 
 export type NewStudentImportantStuff = ImportantStuffBase & {
@@ -391,6 +391,38 @@ export type NewDbStudentImportantStuff = NewStudentImportantStuff & {
 }
 
 export type DbStudentImportantStuff = NewStudentImportantStuff & {
+  _id: ObjectId
+  student: {
+    _id: ObjectId
+  }
+}
+
+// StudentDataSharingConsent
+
+export type StudentDataSharingConsentBase = {
+  created: EditorData
+  modified: EditorData
+  consent: boolean
+  message: string
+}
+
+export type NewStudentDataSharingConsent = StudentDataSharingConsentBase & {
+  student: {
+    _id: string
+  }
+}
+
+export type StudentDataSharingConsent = NewStudentDataSharingConsent & {
+  _id: string
+}
+
+export type NewDbStudentDataSharingConsent = StudentDataSharingConsentBase & {
+  student: {
+    _id: ObjectId
+  }
+}
+
+export type DbStudentDataSharingConsent = StudentDataSharingConsentBase & {
   _id: ObjectId
   student: {
     _id: ObjectId
