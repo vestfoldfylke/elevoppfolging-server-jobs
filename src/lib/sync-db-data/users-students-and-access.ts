@@ -210,8 +210,8 @@ export const updateUsersStudentsAndAccess = (
 
           return {
             entraUserId: userToLink.entra.id,
-            feideName: feideName,
-            name: `${firstName} ${lastName}`,
+            feideName: userToLink.feideName || feideName,
+            name: userToLink.entra.displayName,
             systemId: undervisningsforhold.skoleressurs.systemId.identifikatorverdi
           }
         }
