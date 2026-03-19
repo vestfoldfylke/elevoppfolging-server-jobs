@@ -109,13 +109,6 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
   }
 
-  if (student.mainEnrollment?.source === "AUTO") {
-    const mainEnrollmentInFint = schoolsWithStudents
-      .find((s) => s.skole?.skolenummer.identifikatorverdi === student.mainEnrollment?.school.schoolNumber)
-      ?.skole?.elevforhold?.find((ef) => ef?.systemId.identifikatorverdi === student.mainEnrollment?.systemId)
-    if (mainEnrollmentInFint?.hovedskole !== true) return { valid: false, reason: `Main enrollment with system ID ${student.mainEnrollment.systemId} does not have mainSchool true in FINT` }
-  }
-
   return { valid: true, reason: "" }
 }
 
@@ -275,7 +268,6 @@ describe("sync-db-data/users-students-and-access", () => {
       modified: testEditor,
       source: "AUTO",
       studentEnrollments: [],
-      mainEnrollment: null,
       studentNumber: "S12345",
       systemId: "noe"
     }

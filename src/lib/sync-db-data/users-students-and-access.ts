@@ -210,8 +210,8 @@ export const updateUsersStudentsAndAccess = (
 
           return {
             entraUserId: userToLink.entra.id,
-            feideName: feideName,
-            name: `${firstName} ${lastName}`,
+            feideName: userToLink.feideName || feideName,
+            name: userToLink.entra.displayName,
             systemId: undervisningsforhold.skoleressurs.systemId.identifikatorverdi
           }
         }
@@ -451,7 +451,6 @@ export const updateUsersStudentsAndAccess = (
           ssn: elev.person.fodselsnummer.identifikatorverdi,
           name: `${elev.person.navn.fornavn} ${elev.person.navn.mellomnavn ? `${elev.person.navn.mellomnavn} ` : ""}${elev.person.navn.etternavn}`,
           studentEnrollments: [],
-          mainEnrollment: null,
           created: editorData,
           modified: editorData,
           source: "AUTO"
@@ -470,7 +469,6 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
-        currentStudent.mainEnrollment ??= null // haha
       }
       currentStudent.studentEnrollments.push(studentEnrollment)
     }
@@ -542,9 +540,6 @@ export const updateUsersStudentsAndAccess = (
     if (student.studentEnrollments.filter((enrollment) => enrollment.mainSchool).length > 1) {
       logger.warn("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
     }
-
-    // Set mainEnrollment to be the first enrollment with mainSchool true, or null
-    student.mainEnrollment = student.studentEnrollments.find((enrollment) => enrollment.mainSchool) || null
   })
 
   logger.info("Ferdig med synk av elever og tilganger basert på FINT-data")
