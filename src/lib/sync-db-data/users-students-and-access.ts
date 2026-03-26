@@ -12,9 +12,9 @@ import type {
   DbAppUser,
   DbSchool,
   EditorData,
-  NewAccess,
   NewAppStudent,
   NewAppUser,
+  NewDbAccess,
   NewSchool,
   Period,
   SchoolInfo,
@@ -68,12 +68,18 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
   }
 }
 
-const cloneDbDocument = <T extends { _id: ObjectId }>(doc: T): T => {
-  const temp = {
-    ...doc,
-    _id: doc._id.toString()
-  }
-  return { ...structuredClone(temp), _id: new ObjectId(doc._id) }
+const cloneDbDocument = <T>(doc: T): T => {
+  const stringified = JSON.stringify(doc, (key, value) => {
+    if (key === "_id") {
+      return value.toString()
+    }
+    return value
+  })
+
+  return JSON.parse(stringified, (key, value) => {
+    if (key === "_id") return new ObjectId(value)
+    return value
+  })
 }
 
 export const updateUsersStudentsAndAccess = (
@@ -83,7 +89,7 @@ export const updateUsersStudentsAndAccess = (
   currentSchools: DbSchool[],
   fintSchoolsWithStudents: FintSchoolWithStudents[],
   enterpriseApplicationUsers: User[]
-): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewAccess)[]; updatedSchools: (DbSchool | NewSchool)[] } => {
+): { updatedAppUsers: (DbAppUser | NewAppUser)[]; updatedStudents: (DbAppStudent | NewAppStudent)[]; updatedAccess: (DbAccess | NewDbAccess)[]; updatedSchools: (DbSchool | NewSchool)[] } => {
   const syncTimestamp: Date = new Date()
 
   const editorData: EditorData = {
@@ -104,9 +110,10 @@ export const updateUsersStudentsAndAccess = (
     student.studentEnrollments = student.studentEnrollments.filter((enrollment) => enrollment.source === "MANUAL")
   })
 
-  const updatedAccess: (DbAccess | NewAccess)[] = currentAccess.map(cloneDbDocument)
+  const updatedAccess: (DbAccess | NewDbAccess)[] = currentAccess.map(cloneDbDocument)
+
   // wipe previous auto access
-  updatedAccess.forEach((access: DbAccess | NewAccess) => {
+  updatedAccess.forEach((access: DbAccess | NewDbAccess) => {
     access.classes = access.classes.filter((entry) => entry.type !== "AUTOMATISK-KLASSE-TILGANG")
     access.teachingGroups = access.teachingGroups.filter((entry) => entry.type !== "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG")
     access.contactTeacherGroups = access.contactTeacherGroups.filter((entry) => entry.type !== "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")
@@ -296,17 +303,18 @@ export const updateUsersStudentsAndAccess = (
       logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
       return
     }
-    let teacherAccess: DbAccess | NewAccess | undefined = updatedAccess.find((access: DbAccess | NewAccess) => access.entraUserId === teacher.entraUserId)
+    let teacherAccess: DbAccess | NewDbAccess | undefined = updatedAccess.find((access: DbAccess | NewDbAccess) => access.entraUserId === teacher.entraUserId)
     if (!teacherAccess) {
       teacherAccess = {
         entraUserId: teacher.entraUserId,
         name: teacher.name,
-        schools: [],
+        leaderForSchools: [],
         programAreas: [],
         classes: [],
         contactTeacherGroups: [],
         teachingGroups: [],
-        students: []
+        students: [],
+        manageManualStudentsForSchools: []
       }
       updatedAccess.push(teacherAccess)
     }
