@@ -5,7 +5,7 @@ import { ObjectId } from "mongodb"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAccess, NewAppUser, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type {
   FintElev,
@@ -17,7 +17,7 @@ import type {
   FintUndervisningsgruppemedlemskap
 } from "../../src/types/fint/fint-school-with-students.js"
 
-const isValidAutoAccess = (access: DbAccess | NewAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
+const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
   if (!user) return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
 
@@ -391,6 +391,7 @@ describe("sync-db-data/users-students-and-access", () => {
     ]
 
     const existingAccessId = new ObjectId()
+    const manualTeacherAccessId = new ObjectId()
     const currentAccess: DbAccess[] = [
       {
         _id: existingAccessId,
@@ -399,13 +400,14 @@ describe("sync-db-data/users-students-and-access", () => {
         programAreas: [
           {
             type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG",
-            _id: "jeg-skal-ikke-bli-borte",
+            _id: manualTeacherAccessId,
             schoolNumber: "69",
             granted: testEditor,
             source: "MANUAL"
           }
         ],
-        schools: [],
+        leaderForSchools: [],
+        manageManualStudentsForSchools: [],
         students: [],
         classes: [
           {
@@ -532,8 +534,13 @@ describe("sync-db-data/users-students-and-access", () => {
     it("should update existing access correctly", () => {
       const updatedAccess = result.updatedAccess.find((a) => (a as DbAccess)._id.toString() === existingAccessId.toString())
       assert(updatedAccess, "Updated access not found")
+      console.log(
+        "Updated access:",
+        updatedAccess.programAreas.filter((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG")
+      )
+      console.log("Manual teacher access ID:", manualTeacherAccessId.toString())
       assert(
-        updatedAccess.programAreas.find((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG" && c._id === "jeg-skal-ikke-bli-borte"),
+        updatedAccess.programAreas.find((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG" && c._id instanceof ObjectId && c._id.toString() === manualTeacherAccessId.toString()),
         "Expected manual programArea access to be preserved"
       )
       assert(!updatedAccess.classes.find((c) => c.type === "AUTOMATISK-KLASSE-TILGANG" && c.systemId === "jeg-skal-bli-borte"), "Expected old automatic class access to be removed")
