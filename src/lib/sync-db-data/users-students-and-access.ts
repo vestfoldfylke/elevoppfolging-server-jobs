@@ -532,7 +532,7 @@ export const updateUsersStudentsAndAccess = (
       }
     })
 
-    // Check if this i a new school - add it to updatedSchools if it doesn't exist already (AUTO if it comes from FINT, MANUAL if it for some weird reason doesn't)
+    // Check if this is a new school - add it to updatedSchools if it doesn't exist already (AUTO if it comes from FINT, MANUAL if it for some weird reason doesn't)
     student.studentEnrollments.forEach((enrollment) => {
       if (!updatedSchools.some((school) => school.schoolNumber === enrollment.school.schoolNumber)) {
         updatedSchools.push({

@@ -6,7 +6,7 @@ import type { IEntraClient } from "../../types/entra/entra-client.js"
 
 export class EntraClient implements IEntraClient {
   private defaultAzureCredential: DefaultAzureCredential
-  private graphScope: string
+  private readonly graphScope: string
 
   constructor() {
     this.defaultAzureCredential = new DefaultAzureCredential({})

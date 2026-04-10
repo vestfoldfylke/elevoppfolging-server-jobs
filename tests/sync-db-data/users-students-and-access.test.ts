@@ -457,21 +457,21 @@ describe("sync-db-data/users-students-and-access", () => {
     const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, currentSchools, mockSchools, mockEntraUsers)
     writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
-    it("should create students without duplicates", () => {
+    await it("should create students without duplicates", () => {
       // find duplicate students
       const studentIds = result.updatedStudents.map((s) => s.feideName)
       const uniqueStudentIds = new Set(studentIds)
       assert(studentIds.length === uniqueStudentIds.size, `Expected no duplicate students, but ${studentIds.length - uniqueStudentIds.size} duplicates found`)
     })
 
-    it("should only return valid auto access entries", () => {
+    await it("should only return valid auto access entries", () => {
       for (const access of result.updatedAccess) {
         const validation = isValidAutoAccess(access, mockSchools, result.updatedAppUsers)
         assert(validation.valid, `Access validation failed: ${validation.reason}`)
       }
     })
 
-    it("should preserve manual enrollments and set them to inactive when student suddenly appears in FINT with active enrollment at the same school", () => {
+    await it("should preserve manual enrollments and set them to inactive when student suddenly appears in FINT with active enrollment at the same school", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === manualStudentSuddenlyInFint.elev.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       const manualEnrollment = updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold-som-skal-bli-inaktivt")
@@ -479,11 +479,11 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(manualEnrollment.period.end !== null, "Expected manual enrollment to have an end date after being set to inactive")
       assert(manualEnrollment.period.end && manualEnrollment.period.end < new Date(), `Expected manual enrollment to be set to inactive, got end=${manualEnrollment.period.end}`)
       assert(manualEnrollment.classMemberships.length === 1, `Expected manual enrollment to still have class memberships, got ${manualEnrollment.classMemberships.length}`)
-      assert(manualEnrollment.mainSchool === false, `Expected manual enrollment mainSchool to be set to false, got ${manualEnrollment.mainSchool}`)
+      assert(!manualEnrollment.mainSchool, `Expected manual enrollment mainSchool to be set to false, got ${manualEnrollment.mainSchool}`)
       assert(updatedStudent.source === "AUTO", `Expected student source to be updated to AUTO, got ${updatedStudent.source}`)
     })
 
-    it("should update existing student name and student number correctly", () => {
+    await it("should update existing student name and student number correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentNameUpdate.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(!updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes"), "Expected old enrollment to be removed")
@@ -497,7 +497,7 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should update existing student ssn correctly", () => {
+    await it("should update existing student ssn correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentSsnUpdate.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(
@@ -506,7 +506,7 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should update existing student systemId correctly", () => {
+    await it("should update existing student systemId correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.ssn === studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(
@@ -515,23 +515,23 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should remove auto enrollments when student is no longer in FINT", () => {
+    await it("should remove auto enrollments when student is no longer in FINT", () => {
       const deactivatedStudent = result.updatedStudents.find((s) => s.systemId === "jeg-finnes-ikke-i-fint-lenger")
       assert(deactivatedStudent, "Deactivated student not found")
       assert(deactivatedStudent.name === "Et navn som ikke skal oppdateres", `Expected student name to be unchanged, got "${deactivatedStudent.name}"`)
       assert(!deactivatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes-2"), "Expected enrollment to be removed")
     })
 
-    it("should preserve manual enrollments and related access when student is still in FINT", () => {
+    await it("should preserve manual enrollments and related access when student is still in FINT", () => {
       const student = result.updatedStudents.find((s) => s.feideName === studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi)
       assert(student, "Student with manual enrollment not found")
       const manualEnrollment = student.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold")
       assert(manualEnrollment, "Expected manual enrollment to be preserved")
       assert(manualEnrollment.classMemberships.length === 1, "Expected class memberships of manual enrollment to be preserved")
-      assert(manualEnrollment.mainSchool === false, "Expected mainSchool of manual enrollment to be set to false, but got true")
+      assert(!manualEnrollment.mainSchool, "Expected mainSchool of manual enrollment to be set to false, but got true")
     })
 
-    it("should update existing access correctly", () => {
+    await it("should update existing access correctly", () => {
       const updatedAccess = result.updatedAccess.find((a) => (a as DbAccess)._id.toString() === existingAccessId.toString())
       assert(updatedAccess, "Updated access not found")
       console.log(
@@ -554,31 +554,31 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should create valid students", () => {
+    await it("should create valid students", () => {
       for (const student of result.updatedStudents) {
         const validation = studentIsValid(student as DbAppStudent, mockSchools, result.updatedSchools)
         assert(validation.valid, `Student validation failed: ${validation.reason}`)
       }
     })
 
-    it("should preserve previous schools when updating", () => {
+    await it("should preserve previous schools when updating", () => {
       const preservedSchool = result.updatedSchools.find((s) => s.schoolNumber === "42" && "_id" in s && s._id.toString() === tullVgsId.toString())
       assert(preservedSchool, "Expected to find preserved school, but not found")
     })
 
-    it("Should set active to false for users that are no longer active in Entra", () => {
+    await it("Should set active to false for users that are no longer active in Entra", () => {
       const inactiveUser: DbAppUser | NewAppUser | undefined = result.updatedAppUsers.find((user) => {
         return "_id" in user && user._id.toString() === existingUserIdThatShouldBeInactive.toString()
       })
       assert(inactiveUser, "Inactive user not found")
-      assert(inactiveUser.active === false, `Expected user to be inactive, got active=${inactiveUser.active}`)
+      assert(!inactiveUser.active, `Expected user to be inactive, got active=${inactiveUser.active}`)
     })
 
-    it("Should link existing Entra users to MOCK FINT teachers, and set feidename for AppUser based on linked teacher", async () => {
+    await it("Should link existing Entra users to MOCK FINT teachers, and set feidename for AppUser based on linked teacher", async () => {
       for (const entraUser of mockEntraUsers) {
         const user = result.updatedAppUsers.find((appUser) => appUser.entra.id === entraUser.id)
         assert(user, `Expected to find user with Entra ID ${entraUser.id}, but not found`)
-        assert(user.active === true, `Expected user with Entra ID ${entraUser.id} to be active, got active=${user.active}`)
+        assert(user.active, `Expected user with Entra ID ${entraUser.id} to be active, got active=${user.active}`)
         assert(
           entraUser.onPremisesSamAccountName && !user.feideName.startsWith(entraUser.onPremisesSamAccountName),
           `Expected feideName for user with Entra ID ${entraUser.id} to be updated with a random MOCK-teachers feidenavn, got feideName=${user.feideName} and onPremisesSamAccountName=${entraUser.onPremisesSamAccountName}`
