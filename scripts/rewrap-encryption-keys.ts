@@ -1,10 +1,10 @@
-import { logger } from "@vestfoldfylke/loglady";
-import { MongoDbEncryptionClient } from "../src/lib/db/mongodb-encryption-client.js";
+import { logger } from "@vestfoldfylke/loglady"
+import { MongoDbEncryptionClient } from "../src/lib/db/mongodb-encryption-client.js"
 
-logger.info("Starting script to get or create encryption keys...");
+logger.info("Starting script to get or create encryption keys...")
 
-logger.info("Initializing MongoDbEncryptionClient...");
-const encryptionClient = new MongoDbEncryptionClient();
+logger.info("Initializing MongoDbEncryptionClient...")
+const encryptionClient = new MongoDbEncryptionClient()
 
 logger.info("Re-wrapping existing encryption keys")
 

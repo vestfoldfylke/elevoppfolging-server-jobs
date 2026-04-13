@@ -1,5 +1,5 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { ClientEncryption, DataKey, type Db,MongoClient, UUID } from "mongodb"
+import { ClientEncryption, type DataKey, type Db, MongoClient, type UUID } from "mongodb"
 
 export class MongoDbEncryptionClient {
   private readonly mongoClient: MongoClient
@@ -19,7 +19,7 @@ export class MongoDbEncryptionClient {
       throw new Error("MONGODB_DB_NAME is not set (du har glemt den)")
     }
     if (!process.env.AZURE_TENANT_ID || !process.env.AZURE_CLIENT_ID || !process.env.AZURE_CLIENT_SECRET) {
-      throw new Error("Azure credentials for client-side encryption is not fully set (du har glemt en av AZURE_TENANT_ID, AZURE_CLIENT_ID eller AZURE_CLIENT_SECRET)") 
+      throw new Error("Azure credentials for client-side encryption is not fully set (du har glemt en av AZURE_TENANT_ID, AZURE_CLIENT_ID eller AZURE_CLIENT_SECRET)")
     }
     if (!process.env.AZURE_KEY_VAULT_ENDPOINT || !process.env.AZURE_MASTER_KEY_NAME || !process.env.AZURE_MASTER_KEY_VERSION) {
       throw new Error("Azure Key Vault details for client-side encryption is not fully set (du har glemt en av AZURE_KEY_VAULT_ENDPOINT, AZURE_MASTER_KEY_NAME eller AZURE_MASTER_KEY_VERSION)")
@@ -96,7 +96,7 @@ export class MongoDbEncryptionClient {
     await keyvaultCollection.createIndex({ keyAltNames: 1 }, { unique: true, partialFilterExpression: { keyAltNames: { $exists: true } } })
 
     const encryptionClient = await this.getEncryptionClient()
-    const encryptionKeyId = await encryptionClient.createDataKey('azure', {
+    const encryptionKeyId = await encryptionClient.createDataKey("azure", {
       masterKey: this.masterKey,
       keyAltNames
     })
@@ -110,16 +110,18 @@ export class MongoDbEncryptionClient {
 
   async rewrapEncryptionKeys(): Promise<void> {
     const encryptionClient = await this.getEncryptionClient()
-    const result = await encryptionClient.rewrapManyDataKey({},
-    {
-      provider: "azure",
-      masterKey: this.masterKey
-    })
+    const result = await encryptionClient.rewrapManyDataKey(
+      {},
+      {
+        provider: "azure",
+        masterKey: this.masterKey
+      }
+    )
 
     if (result.bulkWriteResult != null) {
-      console.log(`Keys were re-wrapped. Details: ${JSON.stringify(result.bulkWriteResult)}`);
+      console.log(`Keys were re-wrapped. Details: ${JSON.stringify(result.bulkWriteResult)}`)
       return
     }
-    console.log("No keys matched the filter, no bulk write performed.");
+    console.log("No keys matched the filter, no bulk write performed.")
   }
 }

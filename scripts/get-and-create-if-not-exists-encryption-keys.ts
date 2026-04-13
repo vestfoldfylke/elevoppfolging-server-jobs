@@ -1,18 +1,18 @@
-import { logger } from "@vestfoldfylke/loglady";
-import { MongoDbEncryptionClient } from "../src/lib/db/mongodb-encryption-client.js";
+import { logger } from "@vestfoldfylke/loglady"
+import { MongoDbEncryptionClient } from "../src/lib/db/mongodb-encryption-client.js"
 
-logger.info("Starting script to get or create encryption keys...");
+logger.info("Starting script to get or create encryption keys...")
 
 const keysToEnsure = ["key1", "key2", "key3"]
 
-logger.info("Initializing MongoDbEncryptionClient...");
-const encryptionClient = new MongoDbEncryptionClient();
+logger.info("Initializing MongoDbEncryptionClient...")
+const encryptionClient = new MongoDbEncryptionClient()
 
-logger.info("Fetching existing encryption keys...");
+logger.info("Fetching existing encryption keys...")
 const existingKeys = await encryptionClient.getEncryptionKeys()
 
 for (const keyAltName of keysToEnsure) {
-  const existingKey = existingKeys.find(key => key.keyAltNames?.includes(keyAltName))
+  const existingKey = existingKeys.find((key) => key.keyAltNames?.includes(keyAltName))
   if (existingKey) {
     logger.info(`Encryption key with alt name "${keyAltName}" already exists with id ${existingKey._id.toString()}. Skipping creation.`)
   } else {
@@ -25,7 +25,7 @@ for (const keyAltName of keysToEnsure) {
 logger.info("Fetching again for fun")
 
 const allKeys = await encryptionClient.getEncryptionKeys()
-logger.info(`All encryption keys in the system: ${allKeys.map(key => ({ id: key._id.toString(), altNames: key.keyAltNames }))}`)
+logger.info(`All encryption keys in the system: ${allKeys.map((key) => ({ id: key._id.toString(), altNames: key.keyAltNames }))}`)
 
 await encryptionClient.closeConnection()
 

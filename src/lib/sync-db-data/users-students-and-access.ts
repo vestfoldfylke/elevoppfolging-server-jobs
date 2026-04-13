@@ -190,7 +190,7 @@ export const updateUsersStudentsAndAccess = (
     const validUndervisningsforhold: FintUndervisningsforhold[] = getValidGraphQlArray<FintUndervisningsforhold, FintUndervisningsforhold[]>(undervisningsforhold, "undervisningsforhold", elev)
 
     const undervisningsforholdWithTeacher: FintUndervisningsforhold[] = validUndervisningsforhold.filter((undervisningsforhold: FintUndervisningsforhold) => {
-      if (!undervisningsforhold.skoleressurs.feidenavn || !undervisningsforhold.skoleressurs.feidenavn.identifikatorverdi) {
+      if (!undervisningsforhold.skoleressurs.feidenavn?.identifikatorverdi) {
         logger.warn("Undervisningsforhold med systemId {SystemId} har ingen skoleressurs med feidenavn tilknyttet, hopper over", undervisningsforhold.systemId.identifikatorverdi)
         return false
       }
@@ -381,17 +381,17 @@ export const updateUsersStudentsAndAccess = (
     for (const elevforhold of validElevforhold) {
       const elev: FintElev = elevforhold.elev
 
-      if (!elev.systemId || !elev.systemId.identifikatorverdi) {
+      if (!elev.systemId?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen systemId, hopper over", elev.person.navn.fornavn)
         continue
       }
 
-      if (!elev.elevnummer || !elev.elevnummer.identifikatorverdi) {
+      if (!elev.elevnummer?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen elevnummer, hopper over", elev.person.navn.fornavn)
         continue
       }
 
-      if (!elev.feidenavn || !elev.feidenavn.identifikatorverdi) {
+      if (!elev.feidenavn?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen feidenavn, hopper over", elev.person.navn.fornavn)
         continue
       }
