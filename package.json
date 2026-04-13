@@ -16,23 +16,26 @@
     "lint": "npx @biomejs/biome check",
     "lint:fix": "npx @biomejs/biome check --write",
     "generate-fint-types": "node --env-file=.env node_modules/.bin/graphql-codegen",
-    "generate-fint-mock-data": "node --import tsx ./scripts/generate-fint-mock-data.ts"
+    "generate-fint-mock-data": "node --import tsx ./scripts/generate-fint-mock-data.ts",
+    "get-encryption-keys": "node --env-file=.env --import tsx ./scripts/get-and-create-if-not-exists-encryption-keys.ts",
+    "rewrap-encryption-keys": "node --env-file=.env --import tsx ./scripts/rewrap-encryption-keys.ts"
   },
   "dependencies": {
-    "@azure/functions": "^4.0.0",
-    "@azure/identity": "^4.13.0",
-    "@vestfoldfylke/loglady": "^1.5.2",
-    "mongodb": "^7.0.0"
+    "@azure/functions": "^4.12.0",
+    "@azure/identity": "^4.13.1",
+    "@vestfoldfylke/loglady": "^1.5.3",
+    "mongodb": "^7.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.13",
-    "@faker-js/faker": "^10.3.0",
-    "@graphql-codegen/cli": "^6.1.1",
-    "@graphql-codegen/typescript": "^5.0.7",
-    "@graphql-codegen/typescript-operations": "^5.0.7",
+    "@biomejs/biome": "2.4.11",
+    "@faker-js/faker": "^10.4.0",
+    "@graphql-codegen/cli": "^6.2.1",
+    "@graphql-codegen/typescript": "^5.0.9",
+    "@graphql-codegen/typescript-operations": "^5.0.9",
     "@microsoft/microsoft-graph-types": "^2.43.1",
-    "@types/node": "18.x",
+    "@types/node": "^18.19.130",
+    "mongodb-client-encryption": "^7.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.3"
   }
 }
