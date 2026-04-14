@@ -15,11 +15,12 @@ for (const keyAltName of keysToEnsure) {
   const existingKey = existingKeys.find((key) => key.keyAltNames?.includes(keyAltName))
   if (existingKey) {
     logger.info(`Encryption key with alt name "${keyAltName}" already exists with id ${existingKey._id.toString()}. Skipping creation.`)
-  } else {
-    logger.info(`No encryption key found with alt name "${keyAltName}". Creating new encryption key...`)
-    const newKeyId = await encryptionClient.createEncryptionKey([keyAltName])
-    logger.info(`Created new encryption key with alt name "${keyAltName}" and id ${newKeyId.toString()}.`)
+    continue
   }
+
+  logger.info(`No encryption key found with alt name "${keyAltName}". Creating new encryption key...`)
+  const newKeyId = await encryptionClient.createEncryptionKey([keyAltName])
+  logger.info(`Created new encryption key with alt name "${keyAltName}" and id ${newKeyId.toString()}.`)
 }
 
 logger.info("Fetching again for fun")
