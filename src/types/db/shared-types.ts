@@ -1,4 +1,4 @@
-import type { ObjectId } from "mongodb"
+import type { Binary, ObjectId } from "mongodb"
 
 /** Undervisningsforhold & Skoleressurs */
 export type Teacher = {
@@ -23,6 +23,10 @@ export type GroupMembership = {
 /** Klasse */
 export type ClassGroup = Group & {
   teachers: Teacher[]
+}
+
+export type StudentClassGroup = ClassGroup & {
+  school: SchoolInfo
 }
 
 /** Klassemedlemskap */
@@ -122,6 +126,18 @@ export type AppStudent = NewAppStudent & {
 
 export type DbAppStudent = NewAppStudent & {
   _id: ObjectId
+}
+
+export type UpdateAppStudent = AppStudent
+
+export type NewManualStudentInput = {
+  ssn: string
+  name: string
+  school: School
+}
+
+export type UpdateManualStudentInput = NewManualStudentInput & {
+  studentId: string
 }
 
 export type AccessEntryBase = {
@@ -300,6 +316,15 @@ export type DocumentParagraphItem = {
   value: string
 }
 
+export type DocumentInfoItem = {
+  type: "info"
+  value: string
+  link: {
+    url: string
+    text: string
+  }
+}
+
 export type DocumentTextInputItem = {
   type: "inputText"
   label: string
@@ -307,6 +332,10 @@ export type DocumentTextInputItem = {
   required: boolean
   placeholder?: string
   helpText?: string
+}
+
+export type EncryptedDocumentTextInputItem = Omit<DocumentTextInputItem, "value"> & {
+  value: Binary
 }
 
 export type DocumentTextAreaItem = {
@@ -344,7 +373,7 @@ export type DocumentCheckboxGroupItem = {
 
 export type DocumentInputItem = DocumentTextInputItem | DocumentTextAreaItem | DocumentRadioGroupItem | DocumentCheckboxGroupItem
 
-export type DocumentContentItem = DocumentHeaderItem | DocumentParagraphItem | DocumentInputItem
+export type DocumentContentItem = DocumentHeaderItem | DocumentParagraphItem | DocumentInfoItem | DocumentInputItem
 
 export type DocumentMessageBase = {
   created: EditorData
@@ -374,7 +403,15 @@ export type DocumentUpdate = DocumentMessageBase & DocumentUpdateInput
 
 export type NewDocumentMessage = DocumentComment | DocumentUpdate
 
+export type NewDbEncryptedDocumentMessage = Omit<NewDocumentMessage, "content"> & {
+  content: Binary
+}
+
 export type DocumentMessage = NewDocumentMessage & {
+  messageId: string
+}
+
+export type DbEncryptedDocumentMessage = NewDbEncryptedDocumentMessage & {
   messageId: string
 }
 
@@ -407,6 +444,16 @@ export type NewStudentDocument = DocumentBase &
 
 export type StudentDocumentUpdate = DocumentBase & DocumentInput
 
+export type DbEncryptedStudentDocumentUpdate = Omit<StudentDocumentUpdate, "title" | "content" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+}
+
 export type StudentDocument = NewStudentDocument & {
   _id: string
 }
@@ -421,6 +468,21 @@ export type DbStudentDocument = NewDbStudentDocument & {
   _id: ObjectId
 }
 
+export type NewDbEncryptedStudentDocument = Omit<NewDbStudentDocument, "title" | "content" | "messages" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+  messages: DbEncryptedDocumentMessage[]
+}
+
+export type DbEncryptedStudentDocument = NewDbEncryptedStudentDocument & {
+  _id: ObjectId
+}
+
 export type AvailableForDocumentType = {
   student: boolean
   group: boolean
@@ -430,7 +492,7 @@ export type AvailableForDocumentType = {
 export type NewDocumentContentTemplate = {
   name: string
   version: number
-  availableForDocumentType: AvailableForDocumentType // Hmm might need explicit difference here if we add specific types for student documents (like fag-selector and so on)
+  availableForDocumentType: AvailableForDocumentType // might need explicit difference here if we add specific types for student documents (like fag-selector and so on)
   created: EditorData
   modified: EditorData
   content: DocumentContentItem[]
@@ -458,11 +520,19 @@ export type NewStudentCheckBox = StudentCheckBoxInput & {
   created: EditorData
 }
 
+export type NewDbEncryptedStudentCheckBox = Omit<NewStudentCheckBox, "value"> & {
+  value: Binary
+}
+
 export type StudentCheckBox = NewStudentCheckBox & {
   _id: string
 }
 
 export type DbStudentCheckBox = NewStudentCheckBox & {
+  _id: ObjectId
+}
+
+export type DbEncryptedStudentCheckBox = NewDbEncryptedStudentCheckBox & {
   _id: ObjectId
 }
 
@@ -501,7 +571,18 @@ export type NewDbStudentImportantStuff = NewStudentImportantStuff & {
   }
 }
 
+export type NewDbEncryptedStudentImportantStuff = Omit<NewDbStudentImportantStuff, "importantInfo"> & {
+  importantInfo: Binary
+}
+
 export type DbStudentImportantStuff = NewStudentImportantStuff & {
+  _id: ObjectId
+  student: {
+    _id: ObjectId
+  }
+}
+
+export type DbEncryptedStudentImportantStuff = NewDbEncryptedStudentImportantStuff & {
   _id: ObjectId
   student: {
     _id: ObjectId
