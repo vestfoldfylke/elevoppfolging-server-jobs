@@ -529,6 +529,8 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(manualEnrollment, "Expected manual enrollment to be preserved")
       assert(manualEnrollment.classMemberships.length === 1, "Expected class memberships of manual enrollment to be preserved")
       assert(manualEnrollment.mainSchool === false, "Expected mainSchool of manual enrollment to be set to false, but got true")
+      assert(manualEnrollment.period.end === null, `Expected manual enrollment to still be active with end date null, but got end date ${manualEnrollment.period.end}`)
+      assert(manualEnrollment.period.start instanceof Date, `Expected manual enrollment period start to be a Date, but got ${typeof manualEnrollment.period.start}`)
     })
 
     it("should update existing access correctly", () => {

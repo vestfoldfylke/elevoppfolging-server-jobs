@@ -1,6 +1,6 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
-import { ObjectId } from "mongodb"
+import { BSON, type Document, ObjectId } from "mongodb"
 import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
@@ -68,18 +68,8 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
   }
 }
 
-const cloneDbDocument = <T>(doc: T): T => {
-  const stringified = JSON.stringify(doc, (key, value) => {
-    if (key === "_id") {
-      return value.toString()
-    }
-    return value
-  })
-
-  return JSON.parse(stringified, (key, value) => {
-    if (key === "_id") return new ObjectId(value)
-    return value
-  })
+const cloneDbDocument = <T extends Document>(doc: T): T => {
+  return BSON.deserialize(BSON.serialize(doc)) as T
 }
 
 export const updateUsersStudentsAndAccess = (
