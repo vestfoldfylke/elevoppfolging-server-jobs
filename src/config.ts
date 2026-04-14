@@ -1,6 +1,6 @@
 export const MOCK_FINT = process.env.MOCK_FINT === "true"
 
-if (MOCK_FINT && (!process.env.MOCK_FINT_DATA_PATH || !process.env.MOCK_FINT_DATA_PATH.endsWith(".json"))) {
+if (MOCK_FINT && !process.env.MOCK_FINT_DATA_PATH?.endsWith(".json")) {
   throw new Error("MOCK_FINT is set to true, but MOCK_FINT_DATA_PATH is not set to a valid .json file path")
 }
 
