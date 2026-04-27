@@ -4,7 +4,7 @@ import { logger } from "@vestfoldfylke/loglady"
 import { getDbClient } from "../lib/db/get-db-client.js"
 import { getEntraClient } from "../lib/entra/get-entra-client.js"
 import { getFintClient } from "../lib/fint/get-fint-client.js"
-import { updateUsersStudentsAndAccess } from "../lib/sync-db-data/users-students-and-access.js"
+/*import { updateUsersStudentsAndAccess } from "../lib/sync-db-data/users-students-and-access.js"*/
 import type { IDbClient } from "../types/db/db-client.js"
 import type { IEntraClient } from "../types/entra/entra-client.js"
 import type { IFintClient } from "../types/fint/fint-client.js"
@@ -52,7 +52,9 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   const dbSchools = await dbClient.getSchools()
   logger.info(`Fetched ${dbSchools.length} schools records from database.`)
 
-  logger.info("Syncing users and students...")
+  return { body: "Skipping 'Syncing users and students' to test " }
+
+  /*logger.info("Syncing users and students...")
 
   const updatedData = updateUsersStudentsAndAccess(dbUsers, dbStudents, dbAccess, dbSchools, schoolsWithStudents, appUsers)
 
@@ -68,7 +70,7 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
 
   logger.info("Sync completed successfully.")
 
-  return { body: `Hello balle!` }
+  return { body: `Hello balle!` }*/
 }
 
 app.http("SyncStudentsAndAccess", {

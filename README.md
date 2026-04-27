@@ -1,6 +1,34 @@
 # elevoppfolging-server-jobs
 Elevoppfølging server side jobs
 
+## Setup
+
+Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
+
+```env
+# Set to "true" to enable mock FINT data mode
+MOCK_FINT=
+# Path to a .json file containing mock FINT data (required if MOCK_FINT is true)
+MOCK_FINT_DATA_PATH=
+# Application name (default: "elevoppfolging-server-jobs")
+APP_NAME=
+# Set to "true" to use a mock database client
+MOCK_DB=
+# Set to "true" to use a mock Entra client
+MOCK_ENTRA=
+# Suffix for Feide usernames (default: "fylke.no")
+FEIDENAME_SUFFIX=
+# MongoDB connection string (required for production)
+MONGODB_CONNECTION_STRING=
+# MongoDB database name (default: "elevoppfolging")
+MONGODB_DB_NAME=
+# Azure App Registration ID for the frontend (required unless MOCK_ENTRA is true)
+FRONTEND_APP_REGISTRATION_ID=
+
+# Generer en FINT Bearer token og lim inn når generering av typer trengs
+FINT_GENERATE_TYPES_MANUAL_KEY=
+```
+
 ## Brukersynkronisering
 - Henter alle elevene fra FINT via skoler
 - Henter alle eksisterende appStudents fra db
@@ -16,8 +44,3 @@ Elevoppfølging server side jobs
 - Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
 
 TODO: utvide readme
-
-
-
-
-
