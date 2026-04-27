@@ -99,10 +99,13 @@ export const updateUsersStudentsAndAccess = (
   const studentSystemIds = updatedStudents.map((student) => student.systemId)
   const duplicateStudentSystemIds = studentSystemIds.filter((systemId, index) => studentSystemIds.indexOf(systemId) !== index)
   if (duplicateStudentSystemIds.length > 0) {
-    logger.error("Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.", duplicateStudentSystemIds)
+    logger.error(
+      "Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIds
+    )
     throw new Error(`Det finnes duplikate elever i databasen med systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
   }
-  
+
   const studentSsns = updatedStudents.map((student) => student.ssn)
   const duplicateStudentSsns = studentSsns.filter((ssn, index) => studentSsns.indexOf(ssn) !== index)
   if (duplicateStudentSsns.length > 0) {

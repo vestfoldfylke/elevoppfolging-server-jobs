@@ -251,11 +251,11 @@ describe("sync-db-data/users-students-and-access", () => {
 
     const studentNameUpdate = getRandomElev([manualStudentSuddenlyInFint.elev]).elev
     if (!studentNameUpdate) throw new Error("Mock data generation failed, no students found")
-    
-      const studentSsnUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate]).elev
+
+    const studentSsnUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate]).elev
     if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
-    
-      const studentSystemIdUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate]).elev
+
+    const studentSystemIdUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate]).elev
     if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
 
     const studentWithManualEnrollment = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
