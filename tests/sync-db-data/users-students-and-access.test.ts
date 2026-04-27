@@ -281,6 +281,7 @@ describe("sync-db-data/users-students-and-access", () => {
         _id: new ObjectId(),
         feideName: "manuell løk",
         systemId: "manuell-løk-id",
+        name: "Manuell Løk",
         ssn: manualStudentSuddenlyInFint.elev.person.fodselsnummer.identifikatorverdi,
         source: "MANUAL", // TODO oppdateres denne da? Skal vi oppdatere den i det hele tatt? Ja, hvis den dukker opp i FINT, er den ikke MANUAL lenger, og da bør source oppdateres.
         studentEnrollments: [
@@ -338,7 +339,8 @@ describe("sync-db-data/users-students-and-access", () => {
         _id: new ObjectId(),
         ssn: "oppdater meg",
         source: "AUTO",
-        systemId: studentSsnUpdate.systemId.identifikatorverdi
+        systemId: studentSsnUpdate.systemId.identifikatorverdi,
+        name: "Oppdatert basert på ssn"
       },
       {
         ...baseCurrentStudent,
@@ -346,7 +348,8 @@ describe("sync-db-data/users-students-and-access", () => {
         ssn: studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi,
         source: "AUTO",
         studentNumber: "S12345",
-        systemId: "oppdater-meg"
+        systemId: "oppdater-meg",
+        name: "Oppdatert basert på systemId"
       },
       {
         ...baseCurrentStudent,
@@ -363,6 +366,7 @@ describe("sync-db-data/users-students-and-access", () => {
         feideName: studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi || "manual.student",
         systemId: studentWithManualEnrollment.elev.systemId.identifikatorverdi,
         ssn: studentWithManualEnrollment.elev.person.fodselsnummer.identifikatorverdi,
+        name: "Elev med manuelt elevforhold som skal bevares",
         source: "AUTO",
         studentEnrollments: [
           {
