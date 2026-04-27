@@ -39,15 +39,15 @@ export class MongoDbClient implements IDbClient {
     const hasNew = collections.some((col) => col.name === newCollectionName)
 
     if (hasPrevious && hasNew) {
-      logger.error(`Both ${previousCollectionName} and ${newCollectionName} exist. Manual intervention required. SEND TO JAIL! R og J må inn og fikse dette.`)
+      logger.error("Both {PreviousCollectionName} and {NewCollectionName} exist. Manual intervention required. SEND TO JAIL! R og J må inn og fikse dette", previousCollectionName, newCollectionName)
       throw new Error(`Both ${previousCollectionName} and ${newCollectionName} exist. Manual intervention required.`)
     }
 
     if (hasPrevious) {
       try {
-        logger.info(`Renaming collection ${previousCollectionName} to ${newCollectionName}`)
+        logger.info("Renaming collection {PreviousCollectionName} to {NewCollectionName}", previousCollectionName, newCollectionName)
         await db.collection(previousCollectionName).rename(newCollectionName)
-        logger.info(`Renamed collection ${previousCollectionName} to ${newCollectionName}`)
+        logger.info("Renamed collection {PreviousCollectionName} to {NewCollectionName}", previousCollectionName, newCollectionName)
       } catch (error) {
         logger.errorException(error, `Error renaming collection ${previousCollectionName} to ${newCollectionName}`)
         throw error
@@ -68,21 +68,21 @@ export class MongoDbClient implements IDbClient {
     // Finally, rename collections
     if (hasCurrent) {
       try {
-        logger.info(`Renaming collection ${collectionName} to ${previousCollectionName}`)
+        logger.info("Renaming collection {CollectionName} to {PreviousCollectionName}", collectionName, previousCollectionName)
         await db.collection(collectionName).rename(previousCollectionName)
-        logger.info(`Renamed collection ${collectionName} to ${previousCollectionName}`)
+        logger.info("Renamed collection {CollectionName} to {PreviousCollectionName}", collectionName, previousCollectionName)
       } catch (error) {
         logger.errorException(error, `Error renaming collection ${collectionName} to ${previousCollectionName}`)
         throw error
       }
     } else {
-      logger.info(`No existing collection named ${collectionName} to rename to ${previousCollectionName}, will skip this step, and just create the new collection.`)
+      logger.info("No existing collection named {CollectionName} to rename to {PreviousCollectionName}, will skip this step, and just create the new collection", collectionName, previousCollectionName)
     }
 
     try {
-      logger.info(`Renaming collection ${newCollectionName} to ${collectionName}`)
+      logger.info("Renaming collection {NewCollectionName} to {CollectionName}", newCollectionName, collectionName)
       await db.collection(newCollectionName).rename(collectionName)
-      logger.info(`Renamed collection ${newCollectionName} to ${collectionName}`)
+      logger.info("Renamed collection {NewCollectionName} to {CollectionName}", newCollectionName, collectionName)
     } catch (error) {
       logger.errorException(error, `Error renaming collection ${newCollectionName} to ${collectionName}`)
       throw error

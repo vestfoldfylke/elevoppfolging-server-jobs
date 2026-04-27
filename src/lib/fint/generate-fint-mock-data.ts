@@ -222,7 +222,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
     skoleressursPool.push(generateSkoleressurs())
   }
 
-  logger.warn(`This poor bastard should be working at every school: ${skoleressursPool[0].feidenavn?.identifikatorverdi}`)
+  logger.warn("This poor bastard should be working at every school: {FeideName}", skoleressursPool[0].feidenavn?.identifikatorverdi)
 
   const schools: FintSchoolWithStudents[] = []
   config.schoolNames.forEach((schoolName, schoolIndex) => {
@@ -287,11 +287,11 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
         return prevSchoolElevforhold.some((ef) => ef?.elev.systemId.identifikatorverdi === elev.systemId.identifikatorverdi)
       })
       if (!alsoStudentAtPreviousSchool) {
-        logger.info(`Could not find cross-school-student. Adding cross-school student from ${prevSchool.skole?.navn} to ${schoolName}`)
+        logger.info("Could not find cross-school-student. Adding cross-school student from {PreviousSchoolName} to {SchoolName}", prevSchool.skole?.navn, schoolName)
         // If not, add one to ensure at least one student is also at a previous school
         skoleelever.push(norwegianFaker.helpers.arrayElement(prevSchoolElevforhold.filter((ef) => ef !== null)).elev)
       } else {
-        logger.info(`Found cross-school-student for ${schoolName}`)
+        logger.info("Found cross-school-student for {SchoolName}", schoolName)
       }
     }
 
