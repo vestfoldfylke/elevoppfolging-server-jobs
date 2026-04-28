@@ -14,6 +14,8 @@ export type FintConfig = {
   CLIENT_SECRET: string
   SCOPE: string
   TOKEN_URL: string
+  API_URL: string
+  VERSION: string
 }
 
 export type FintAccessTokenResponse = {

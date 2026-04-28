@@ -26,7 +26,10 @@ for (const keyAltName of keysToEnsure) {
 logger.info("Fetching again for fun")
 
 const allKeys = await encryptionClient.getEncryptionKeys()
-logger.info("All encryption keys in the system: '{@EncryptionKeys}", allKeys.map((key) => ({ id: key._id.toString(), altNames: key.keyAltNames })))
+logger.info(
+  "All encryption keys in the system: '{@EncryptionKeys}",
+  allKeys.map((key) => ({ id: key._id.toString(), altNames: key.keyAltNames }))
+)
 
 await encryptionClient.closeConnection()
 

@@ -30,7 +30,12 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
     logger.info("Fetching students for school {SchoolName} ({SchoolNumber})...", skole.navn, skole.skolenummer.identifikatorverdi)
     const schoolWithStudents: FintSchoolWithStudents = await fintClient.getSchoolWithStudents(skole.skolenummer.identifikatorverdi)
     schoolsWithStudents.push(schoolWithStudents)
-    logger.info("Fetched {ElevforholdCount} elevforhold for school {SchoolName} ({SchoolNumber})", schoolWithStudents.skole?.elevforhold?.length ?? null, skole.navn, skole.skolenummer.identifikatorverdi)
+    logger.info(
+      "Fetched {ElevforholdCount} elevforhold for school {SchoolName} ({SchoolNumber})",
+      schoolWithStudents.skole?.elevforhold?.length ?? null,
+      skole.navn,
+      skole.skolenummer.identifikatorverdi
+    )
   }
   logger.info("Fetched students for all {SchoolCount} schools", schoolsWithStudents.length)
 

@@ -15,7 +15,32 @@ Elevoppfølging server side jobs
 - Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT 
 - Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
 
-TODO: utvide readme
+requires following values in `./local.settings.json`
+
+```json5
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "MOCK_FINT": "true",
+    "MOCK_FINT_DATA_PATH": "full-path-to-mock-data.json", // only used if MOCK_FINT is true
+    "MOCK_ENTRA": "true",
+    "MOCK_DB": "true",
+    "FEIDENAME_SUFFIX": "suffix-used-in-feide",
+    "APP_NAME": "Elevoppfølging",
+    // needs Utdanning permissions in FINT
+    "FINT_USERNAME": "fint-username",
+    "FINT_PASSWORD": "fint-password",
+    "FINT_CLIENT_ID": "fint-client-id",
+    "FINT_CLIENT_SECRET": "fint-client-secret",
+    "FINT_SCOPE": "fint-client",
+    "FINT_TOKEN_URL": "https://idp.felleskomponent.no/nidp/oauth/nam/token",
+    "FINT_API_URL": "https://api.felleskomponent.no", // use https://beta.felleskomponent.no for test environment
+    "FINT_VERSION": "4" // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+  },
+  "ConnectionStrings": {}
+}
+```
 
 ## Scripts
 

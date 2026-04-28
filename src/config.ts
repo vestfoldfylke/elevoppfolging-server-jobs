@@ -1,4 +1,4 @@
-import { FintConfig } from "./types/fint/fint-client.js"
+import type { FintConfig } from "./types/fint/fint-client.js"
 
 export const MOCK_FINT = process.env.MOCK_FINT === "true"
 
@@ -61,6 +61,8 @@ export const getFintConfig = (): FintConfig => {
     CLIENT_ID: clientId,
     CLIENT_SECRET: clientSecret,
     SCOPE: process.env.FINT_SCOPE || "fint-client",
-    TOKEN_URL: process.env.FINT_TOKEN_URL || "https://idp.felleskomponent.no/nidp/oauth/nam/token"
+    TOKEN_URL: process.env.FINT_TOKEN_URL || "https://idp.felleskomponent.no/nidp/oauth/nam/token",
+    API_URL: process.env.FINT_API_URL || "https://api.felleskomponent.no",
+    VERSION: `V${process.env.FINT_VERSION || "4"}`
   }
 }

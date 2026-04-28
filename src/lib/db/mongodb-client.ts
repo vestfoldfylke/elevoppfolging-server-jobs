@@ -76,7 +76,11 @@ export class MongoDbClient implements IDbClient {
         throw error
       }
     } else {
-      logger.info("No existing collection named {CollectionName} to rename to {PreviousCollectionName}, will skip this step, and just create the new collection", collectionName, previousCollectionName)
+      logger.info(
+        "No existing collection named {CollectionName} to rename to {PreviousCollectionName}, will skip this step, and just create the new collection",
+        collectionName,
+        previousCollectionName
+      )
     }
 
     try {
