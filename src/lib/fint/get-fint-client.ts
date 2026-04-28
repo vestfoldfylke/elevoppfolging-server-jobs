@@ -1,14 +1,9 @@
 import { MOCK_FINT } from "../../config.js"
 import type { IFintClient } from "../../types/fint/fint-client.js"
+import { FintClient } from "./fint-client.js"
 import { MockFintClient } from "./mock-fint-client.js"
 
-let fintClient: IFintClient
-
-if (MOCK_FINT) {
-  fintClient = new MockFintClient()
-} else {
-  throw new Error("No real FINT client implemented yet.")
-}
+const fintClient: IFintClient = MOCK_FINT ? new MockFintClient() : new FintClient()
 
 export const getFintClient = (): IFintClient => fintClient
 
