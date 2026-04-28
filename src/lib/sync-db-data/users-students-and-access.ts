@@ -95,6 +95,24 @@ export const updateUsersStudentsAndAccess = (
 
   const updatedStudents: (DbAppStudent | NewAppStudent)[] = currentStudents.map(cloneDbDocument)
 
+  // Check if any duplicate students in db - if so, throw error and ask to resolve duplicates before running sync, to avoid data corruption.
+  const studentSystemIds = updatedStudents.map((student) => student.systemId)
+  const duplicateStudentSystemIds = studentSystemIds.filter((systemId, index) => studentSystemIds.indexOf(systemId) !== index)
+  if (duplicateStudentSystemIds.length > 0) {
+    logger.error(
+      "Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIds
+    )
+    throw new Error(`Det finnes duplikate elever i databasen med systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+  }
+
+  const studentSsns = updatedStudents.map((student) => student.ssn)
+  const duplicateStudentSsns = studentSsns.filter((ssn, index) => studentSsns.indexOf(ssn) !== index)
+  if (duplicateStudentSsns.length > 0) {
+    logger.error("Det finnes duplikate elever i databasen med ssn: {DuplicateSsns}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.", duplicateStudentSsns)
+    throw new Error(`Det finnes duplikate elever i databasen med ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+  }
+
   // wipe all previous student enrollments except manual, and set all students to inactive
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
     student.studentEnrollments = student.studentEnrollments.filter((enrollment) => enrollment.source === "MANUAL")
@@ -132,7 +150,7 @@ export const updateUsersStudentsAndAccess = (
         logger.error("User from EntraID is missing crucial info, skipping user: {@User}", enterpriseApplicationUser)
         return
       }
-      logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
+      // logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
       appUser = {
         active: Boolean(enterpriseApplicationUser.accountEnabled),
         feideName: `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`,
@@ -290,7 +308,7 @@ export const updateUsersStudentsAndAccess = (
 
   const upsertTeacherAccess = (teacher: Teacher, accessEntry: ClassAutoAccessEntry | TeachingGroupAutoAccessEntry | ContactTeacherGroupAutoAccessEntry): void => {
     if (!teacher.entraUserId) {
-      logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
+      // logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
       return
     }
     let teacherAccess: DbAccess | NewDbAccess | undefined = updatedAccess.find((access: DbAccess | NewDbAccess) => access.entraUserId === teacher.entraUserId)
@@ -342,6 +360,7 @@ export const updateUsersStudentsAndAccess = (
   enterpriseApplicationUsers.forEach((enterpriseApplicationUser: User) => {
     upsertAppUser(enterpriseApplicationUser)
   })
+
   logger.info("Setter alle brukere som ikke finnes i enterprise-app til inactive")
   updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
     if (!enterpriseApplicationUsers.some((enterpriseApplicationUser: User) => enterpriseApplicationUser.id === appUser.entra.id)) {
@@ -349,6 +368,7 @@ export const updateUsersStudentsAndAccess = (
       logger.info("Setter app-bruker {DisplayName} til inactive, da den ikke lenger finnes i EntraID", appUser.entra.displayName)
     }
   })
+
   logger.info("Synket ferdig litt entrabrukere")
 
   logger.info("Starter synk av elever og tilganger basert på FINT-data")
