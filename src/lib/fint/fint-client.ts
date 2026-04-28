@@ -116,10 +116,10 @@ export class FintClient implements IFintClient {
       throw new Error(`Failed to call FINT ${authOptions.VERSION} graphql endpoint. Status: ${response.status}. StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`)
     }
 
-    const tokenResponse: T = await response.json()
+    const graphqlResponse: T = await response.json()
     logger.info("Successfully called FINT {FintVersion} graphql endpoint", authOptions.VERSION)
 
-    return tokenResponse
+    return graphqlResponse
   }
 
   private async callFintRest<T>(endpoint: string): Promise<T> {
@@ -144,9 +144,9 @@ export class FintClient implements IFintClient {
       throw new Error(`Failed to call FINT ${authOptions.VERSION} REST endpoint. Status: ${response.status}. StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`)
     }
 
-    const tokenResponse: T = await response.json()
+    const restResponse: T = await response.json()
     logger.info("Successfully called FINT {FintVersion} REST endpoint", authOptions.VERSION)
 
-    return tokenResponse
+    return restResponse
   }
 }
