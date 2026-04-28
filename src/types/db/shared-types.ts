@@ -167,7 +167,7 @@ export type ProgramAreaManualAccessEntryInput = {
   schoolNumber: string
   /** Entydig identifikator (db _id) for hvilket undervisningsområde det er gitt tilgang til */
   _id: string
-  type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG"
+  type: "MANUELL-PROGRAMOMRÅDE-TILGANG"
 }
 
 export type DbProgramAreaManualAccessEntry = Omit<ProgramAreaManualAccessEntry, "_id"> & {
@@ -284,9 +284,10 @@ export type DbAppUser = NewAppUser & {
 // PROGRAM AREA
 export type ProgramAreaInput = {
   name: string
+  schoolNumber: string
   classes: {
     systemId: string
-    name: string
+    fallbackName: string
   }[]
 }
 
@@ -380,28 +381,20 @@ export type DocumentMessageBase = {
   modified: EditorData
 }
 
-export type DocumentCommentInput = {
-  type: "comment"
-  content: {
-    text: string
-  }
-}
-
 export type DocumentUpdateInput = {
   type: "update"
   content: {
     title: string
     text: string
   }
+  emailAlertReceivers: string[]
 }
 
-export type DocumentMessageInput = DocumentCommentInput | DocumentUpdateInput
-
-export type DocumentComment = DocumentMessageBase & DocumentCommentInput
+export type DocumentMessageInput = DocumentUpdateInput
 
 export type DocumentUpdate = DocumentMessageBase & DocumentUpdateInput
 
-export type NewDocumentMessage = DocumentComment | DocumentUpdate
+export type NewDocumentMessage = DocumentUpdate
 
 export type NewDbEncryptedDocumentMessage = Omit<NewDocumentMessage, "content"> & {
   content: Binary
@@ -420,6 +413,8 @@ export type DocumentBase = {
   modified: EditorData
 }
 
+export type DocumentAccess = "ALL_WITH_STUDENT_ACCESS" | "EXCLUDE_SUBJECT_TEACHERS"
+
 export type DocumentInput = {
   school: SchoolInfo
   title: string
@@ -429,9 +424,8 @@ export type DocumentInput = {
     version: number
   }
   content: DocumentContentItem[]
-  /*
-  accessTypes: AccessEntry["type"][]
-  */
+  documentAccess: DocumentAccess
+  emailAlertReceivers: string[]
 }
 
 export type NewStudentDocument = DocumentBase &
@@ -483,9 +477,58 @@ export type DbEncryptedStudentDocument = NewDbEncryptedStudentDocument & {
   _id: ObjectId
 }
 
+export type NewGroupDocument = DocumentBase &
+  DocumentInput & {
+    messages: DocumentMessage[]
+    group: {
+      systemId: string
+    }
+  }
+
+export type GroupDocumentUpdate = DocumentBase & DocumentInput
+
+export type DbEncryptedGroupDocumentUpdate = Omit<GroupDocumentUpdate, "title" | "content" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+}
+
+export type GroupDocument = NewGroupDocument & {
+  _id: string
+}
+
+export type NewDbGroupDocument = Omit<NewGroupDocument, "group"> & {
+  group: {
+    systemId: string
+  }
+}
+
+export type DbGroupDocument = NewDbGroupDocument & {
+  _id: ObjectId
+}
+
+export type NewDbEncryptedGroupDocument = Omit<NewDbGroupDocument, "title" | "content" | "messages" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+  messages: DbEncryptedDocumentMessage[]
+}
+
+export type DbEncryptedGroupDocument = NewDbEncryptedGroupDocument & {
+  _id: ObjectId
+}
+
 export type AvailableForDocumentType = {
-  student: boolean
-  group: boolean
+  student?: boolean
+  group?: boolean
 }
 
 // Document content templates
@@ -589,6 +632,48 @@ export type DbEncryptedStudentImportantStuff = NewDbEncryptedStudentImportantStu
   }
 }
 
+export type GroupImportantStuffInput = {
+  school: SchoolInfo
+  importantInfo: string
+}
+
+export type NewGroupImportantStuff = ImportantStuffBase &
+  GroupImportantStuffInput & {
+    type: "GROUP"
+    lastActivityTimestamp: Date
+  }
+
+export type GroupImportantStuff = NewGroupImportantStuff & {
+  _id: string
+  group: {
+    systemId: string
+  }
+}
+
+export type NewDbGroupImportantStuff = NewGroupImportantStuff & {
+  group: {
+    systemId: string
+  }
+}
+
+export type NewDbEncryptedGroupImportantStuff = Omit<NewDbGroupImportantStuff, "importantInfo"> & {
+  importantInfo: Binary
+}
+
+export type DbGroupImportantStuff = NewGroupImportantStuff & {
+  _id: ObjectId
+  group: {
+    systemId: string
+  }
+}
+
+export type DbEncryptedGroupImportantStuff = NewDbEncryptedGroupImportantStuff & {
+  _id: ObjectId
+  group: {
+    systemId: string
+  }
+}
+
 // StudentDataSharingConsent
 
 export type StudentDataSharingConsentBase = {
@@ -623,3 +708,47 @@ export type DbStudentDataSharingConsent = StudentDataSharingConsentBase &
       _id: ObjectId
     }
   }
+
+// EMAIL ALERTS
+
+export type NewDbEmailAlert = {
+  type: "DOCUMENT_CREATED" | "DOCUMENT_MESSAGE_CREATED"
+  documentId: ObjectId
+  receivers: string[]
+  status: "QUEUED" | "SENT" | "FAILED"
+  created: EditorData
+}
+
+export type DbEmailAlert = NewDbEmailAlert & {
+  _id: ObjectId
+}
+
+// METRICS
+
+export type MetricLabel = [labelName: string, labelValue: string]
+
+export type MetricCount = {
+  /** Will be the visible name in Prometheus.<br />
+   *  A system-wide prefix will be added. See <b>metricNamePrefix</b> in handle-metrics.ts.<br />
+   *  If <u>splitMetricByLabels</u> is true, "\_By\_%labelName%" will be appended */
+  name: string
+  /** If <u>splitMetricByLabels</u> is true, " for %labelName%" will be appended */
+  description: string
+  labels?: MetricLabel[]
+  /** If set to true, the metric will be split into <u>x</u> metrics (<u>x</u> is the number of labels present (<b>metricResultName</b> not counted)) and "\_By\_%labelName%" will be appended to the metric name.<br />
+   *  If not set or set to false, all labels will be added to the metric as is.<br />
+   *  Default behavior: false*/
+  splitMetricByLabels?: boolean
+  /** Only applicable when <u>splitMetricByLabels</u> is <b>true</b>.<br />
+   *  If set to false, labels will not be added to the metric (<b>metricResultName</b> will be added anyway).<br />
+   *  If not set or set to true, splitted labels will be added to the metric (<b>metricResultName</b> will be added anyway).<br />
+   *  Default behavior: true */
+  includeLabelsInSplit?: boolean
+}
+
+export type MetricGauge = {
+  name: string
+  description: string
+  value: number
+  labels?: MetricLabel[]
+}

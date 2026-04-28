@@ -406,7 +406,7 @@ describe("sync-db-data/users-students-and-access", () => {
         name: "Eksisterende bruker",
         programAreas: [
           {
-            type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG",
+            type: "MANUELL-PROGRAMOMRÅDE-TILGANG",
             _id: manualTeacherAccessId,
             schoolNumber: "69",
             granted: testEditor,
@@ -545,11 +545,11 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(updatedAccess, "Updated access not found")
       console.log(
         "Updated access:",
-        updatedAccess.programAreas.filter((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG")
+        updatedAccess.programAreas.filter((c) => c.type === "MANUELL-PROGRAMOMRÅDE-TILGANG")
       )
       console.log("Manual teacher access ID:", manualTeacherAccessId.toString())
       assert(
-        updatedAccess.programAreas.find((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG" && c._id instanceof ObjectId && c._id.toString() === manualTeacherAccessId.toString()),
+        updatedAccess.programAreas.find((c) => c.type === "MANUELL-PROGRAMOMRÅDE-TILGANG" && c._id instanceof ObjectId && c._id.toString() === manualTeacherAccessId.toString()),
         "Expected manual programArea access to be preserved"
       )
       assert(!updatedAccess.classes.find((c) => c.type === "AUTOMATISK-KLASSE-TILGANG" && c.systemId === "jeg-skal-bli-borte"), "Expected old automatic class access to be removed")
