@@ -1,7 +1,50 @@
 # elevoppfolging-server-jobs
 Elevoppfølging server side jobs
 
-## Setup
+## Brukersynkronisering
+- Henter alle elevene fra FINT via skoler
+- Henter alle eksisterende appStudents fra db
+- Henter alle enterprise app users
+- Henter alle eksisterende appUsers fra db
+- Henter alle accessEntries fra db
+- Henter alle schools fra db
+- En appStudent inneholder eleven, alle elevforholdene, underliggende klasser, undervinsinggrupper, faggrupper, kontaktlærergrupper, og alle lærere under der igjen.
+- Går gjennom alle elever fra FINT, og oppretter/oppdaterer appStudents, før vi replacer hele collection med appStudents med nye data.
+- Vi beholder alle elever i appStudents (sletter ingen elever automatisk), selv om de har blitt borte fra FINT. Men setter de til active false hvis de ikke har noen aktive elevforhold lenger.
+- Før vi oppdaterer elever basert på FINT-data wiper vi alle AUTOMATISKE elevforhold (altså de som kommer fra FINT), men vi beholder manuelle elevforhold (som er opprettet av brukere i APP'en, rådgivere eller no)
+- Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT 
+- Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
+
+requires following values in `./local.settings.json`
+
+```json5
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "MOCK_FINT": "true",
+    "MOCK_FINT_DATA_PATH": "full-path-to-mock-data.json", // only used if MOCK_FINT is true
+    "MOCK_ENTRA": "true",
+    "MOCK_DB": "true",
+    "FEIDENAME_SUFFIX": "suffix-used-in-feide",
+    "APP_NAME": "Elevoppfølging",
+    // needs Utdanning permissions in FINT
+    "FINT_USERNAME": "fint-username",
+    "FINT_PASSWORD": "fint-password",
+    "FINT_CLIENT_ID": "fint-client-id",
+    "FINT_CLIENT_SECRET": "fint-client-secret",
+    "FINT_SCOPE": "fint-client",
+    "FINT_TOKEN_URL": "https://idp.felleskomponent.no/nidp/oauth/nam/token",
+    "FINT_API_URL": "https://api.felleskomponent.no", // use https://beta.felleskomponent.no for test environment
+    "FINT_VERSION": "4" // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+  },
+  "ConnectionStrings": {}
+}
+```
+
+## Scripts
+
+### Setup
 
 Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
 
@@ -29,18 +72,46 @@ FRONTEND_APP_REGISTRATION_ID=
 FINT_GENERATE_TYPES_MANUAL_KEY=
 ```
 
-## Brukersynkronisering
-- Henter alle elevene fra FINT via skoler
-- Henter alle eksisterende appStudents fra db
-- Henter alle enterprise app users
-- Henter alle eksisterende appUsers fra db
-- Henter alle accessEntries fra db
-- Henter alle schools fra db
-- En appStudent inneholder eleven, alle elevforholdene, underliggende klasser, undervinsinggrupper, faggrupper, kontaktlærergrupper, og alle lærere under der igjen.
-- Går gjennom alle elever fra FINT, og oppretter/oppdaterer appStudents, før vi replacer hele collection med appStudents med nye data.
-- Vi beholder alle elever i appStudents (sletter ingen elever automatisk), selv om de har blitt borte fra FINT. Men setter de til active false hvis de ikke har noen aktive elevforhold lenger.
-- Før vi oppdaterer elever basert på FINT-data wiper vi alle AUTOMATISKE elevforhold (altså de som kommer fra FINT), men vi beholder manuelle elevforhold (som er opprettet av brukere i apppen, rådgivere ellerno)
-- Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT 
-- Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
+#### generate-fint-mock-data
+Generates FINT-mock data and saves to local file - which is used as source data when running in mock-fint mode
 
-TODO: utvide readme
+#### get-encryption-keys
+Gets (and creates if missing) a given number of data encryption keys (see script file)
+Must be run before initial startup of elevoppfølging web app for it to work.
+
+requires following values in `./.env`
+
+```bash
+AZURE_TENANT_ID="<tenant-id>"
+AZURE_CLIENT_ID="<client-id>" # Client (service principal) must have key-vault-administrator role on the key-vault
+AZURE_CLIENT_SECRET="<client-secret>"
+AZURE_MASTER_KEY_VERSION="<current key version>"
+AZURE_MASTER_KEY_NAME="<name of key>"
+AZURE_KEY_VAULT_ENDPOINT="https://<your-key-vault>.vault.azure.net/" # or something similar
+
+MONGODB_CONNECTION_STRING="<connection-string>"
+MONGODB_DB_NAME="<db-name>"
+```
+
+#### rewrap-encryption-keys
+Decrypts all data encryption keys, and reencrypts them with the new master key
+
+requires following values in `./.env`
+
+```bash
+AZURE_TENANT_ID="<tenant-id>"
+AZURE_CLIENT_ID="<client-id>" # Client (service principal) must have key-vault-administrator role on the key-vault
+AZURE_CLIENT_SECRET="<client-secret>"
+AZURE_MASTER_KEY_VERSION="<current key version>"
+AZURE_MASTER_KEY_NAME="<name of key>"
+AZURE_KEY_VAULT_ENDPOINT="https://<your-key-vault>.vault.azure.net/" # or something similar
+
+MONGODB_CONNECTION_STRING="<connection-string>"
+MONGODB_DB_NAME="<db-name>"
+```
+
+1. Create a new version of your key in azure key-vault
+2. Change value of `AZURE_MASTER_KEY_VERSION` in ./.env to the new version
+3. Run script and pray
+4. If all good, disable the old master key in key-vault.
+5. If not good, pray more

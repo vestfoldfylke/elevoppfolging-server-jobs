@@ -251,11 +251,14 @@ describe("sync-db-data/users-students-and-access", () => {
 
     const studentNameUpdate = getRandomElev([manualStudentSuddenlyInFint.elev]).elev
     if (!studentNameUpdate) throw new Error("Mock data generation failed, no students found")
-    const studentSsnUpdate = getRandomElev([studentNameUpdate]).elev
+
+    const studentSsnUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate]).elev
     if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
-    const studentSystemIdUpdate = getRandomElev([studentNameUpdate, studentSsnUpdate]).elev
+
+    const studentSystemIdUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate]).elev
     if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
-    const studentWithManualEnrollment = getRandomElev([studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
+
+    const studentWithManualEnrollment = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
     if (!studentWithManualEnrollment) throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
     studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainschool false
 
@@ -278,6 +281,7 @@ describe("sync-db-data/users-students-and-access", () => {
         _id: new ObjectId(),
         feideName: "manuell løk",
         systemId: "manuell-løk-id",
+        name: "Manuell Løk",
         ssn: manualStudentSuddenlyInFint.elev.person.fodselsnummer.identifikatorverdi,
         source: "MANUAL", // TODO oppdateres denne da? Skal vi oppdatere den i det hele tatt? Ja, hvis den dukker opp i FINT, er den ikke MANUAL lenger, og da bør source oppdateres.
         studentEnrollments: [
@@ -335,7 +339,8 @@ describe("sync-db-data/users-students-and-access", () => {
         _id: new ObjectId(),
         ssn: "oppdater meg",
         source: "AUTO",
-        systemId: studentSsnUpdate.systemId.identifikatorverdi
+        systemId: studentSsnUpdate.systemId.identifikatorverdi,
+        name: "Oppdatert basert på ssn"
       },
       {
         ...baseCurrentStudent,
@@ -343,7 +348,8 @@ describe("sync-db-data/users-students-and-access", () => {
         ssn: studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi,
         source: "AUTO",
         studentNumber: "S12345",
-        systemId: "oppdater-meg"
+        systemId: "oppdater-meg",
+        name: "Oppdatert basert på systemId"
       },
       {
         ...baseCurrentStudent,
@@ -360,6 +366,7 @@ describe("sync-db-data/users-students-and-access", () => {
         feideName: studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi || "manual.student",
         systemId: studentWithManualEnrollment.elev.systemId.identifikatorverdi,
         ssn: studentWithManualEnrollment.elev.person.fodselsnummer.identifikatorverdi,
+        name: "Elev med manuelt elevforhold som skal bevares",
         source: "AUTO",
         studentEnrollments: [
           {
@@ -399,7 +406,7 @@ describe("sync-db-data/users-students-and-access", () => {
         name: "Eksisterende bruker",
         programAreas: [
           {
-            type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG",
+            type: "MANUELL-PROGRAMOMRÅDE-TILGANG",
             _id: manualTeacherAccessId,
             schoolNumber: "69",
             granted: testEditor,
@@ -529,6 +536,8 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(manualEnrollment, "Expected manual enrollment to be preserved")
       assert(manualEnrollment.classMemberships.length === 1, "Expected class memberships of manual enrollment to be preserved")
       assert(!manualEnrollment.mainSchool, "Expected mainSchool of manual enrollment to be set to false, but got true")
+      assert(manualEnrollment.period.end === null, `Expected manual enrollment to still be active with end date null, but got end date ${manualEnrollment.period.end}`)
+      assert(manualEnrollment.period.start instanceof Date, `Expected manual enrollment period start to be a Date, but got ${typeof manualEnrollment.period.start}`)
     })
 
     await it("should update existing access correctly", () => {
@@ -536,11 +545,11 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(updatedAccess, "Updated access not found")
       console.log(
         "Updated access:",
-        updatedAccess.programAreas.filter((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG")
+        updatedAccess.programAreas.filter((c) => c.type === "MANUELL-PROGRAMOMRÅDE-TILGANG")
       )
       console.log("Manual teacher access ID:", manualTeacherAccessId.toString())
       assert(
-        updatedAccess.programAreas.find((c) => c.type === "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG" && c._id instanceof ObjectId && c._id.toString() === manualTeacherAccessId.toString()),
+        updatedAccess.programAreas.find((c) => c.type === "MANUELL-PROGRAMOMRÅDE-TILGANG" && c._id instanceof ObjectId && c._id.toString() === manualTeacherAccessId.toString()),
         "Expected manual programArea access to be preserved"
       )
       assert(!updatedAccess.classes.find((c) => c.type === "AUTOMATISK-KLASSE-TILGANG" && c.systemId === "jeg-skal-bli-borte"), "Expected old automatic class access to be removed")

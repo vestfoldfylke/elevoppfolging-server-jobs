@@ -1,6 +1,6 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
-import { ObjectId } from "mongodb"
+import { BSON, type Document, ObjectId } from "mongodb"
 import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
@@ -68,18 +68,8 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
   }
 }
 
-const cloneDbDocument = <T>(doc: T): T => {
-  const stringified = JSON.stringify(doc, (key, value) => {
-    if (key === "_id") {
-      return value.toString()
-    }
-    return value
-  })
-
-  return JSON.parse(stringified, (key, value) => {
-    if (key === "_id") return new ObjectId(value)
-    return value
-  })
+const cloneDbDocument = <T extends Document>(doc: T): T => {
+  return BSON.deserialize(BSON.serialize(doc)) as T
 }
 
 export const updateUsersStudentsAndAccess = (
@@ -104,6 +94,24 @@ export const updateUsersStudentsAndAccess = (
   const linkedMockUsers: Record<string, string> = {}
 
   const updatedStudents: (DbAppStudent | NewAppStudent)[] = currentStudents.map(cloneDbDocument)
+
+  // Check if any duplicate students in db - if so, throw error and ask to resolve duplicates before running sync, to avoid data corruption.
+  const studentSystemIds = updatedStudents.map((student) => student.systemId)
+  const duplicateStudentSystemIds = studentSystemIds.filter((systemId, index) => studentSystemIds.indexOf(systemId) !== index)
+  if (duplicateStudentSystemIds.length > 0) {
+    logger.error(
+      "Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIds
+    )
+    throw new Error(`Det finnes duplikate elever i databasen med systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+  }
+
+  const studentSsns = updatedStudents.map((student) => student.ssn)
+  const duplicateStudentSsns = studentSsns.filter((ssn, index) => studentSsns.indexOf(ssn) !== index)
+  if (duplicateStudentSsns.length > 0) {
+    logger.error("Det finnes duplikate elever i databasen med ssn: {DuplicateSsns}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.", duplicateStudentSsns)
+    throw new Error(`Det finnes duplikate elever i databasen med ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+  }
 
   // wipe all previous student enrollments except manual, and set all students to inactive
   updatedStudents.forEach((student: DbAppStudent | NewAppStudent) => {
@@ -142,7 +150,7 @@ export const updateUsersStudentsAndAccess = (
         logger.error("User from EntraID is missing crucial info, skipping user: {@User}", enterpriseApplicationUser)
         return
       }
-      logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
+      // logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
       appUser = {
         active: Boolean(enterpriseApplicationUser.accountEnabled),
         feideName: `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`,
@@ -190,7 +198,7 @@ export const updateUsersStudentsAndAccess = (
     const validUndervisningsforhold: FintUndervisningsforhold[] = getValidGraphQlArray<FintUndervisningsforhold, FintUndervisningsforhold[]>(undervisningsforhold, "undervisningsforhold", elev)
 
     const undervisningsforholdWithTeacher: FintUndervisningsforhold[] = validUndervisningsforhold.filter((undervisningsforhold: FintUndervisningsforhold) => {
-      if (!undervisningsforhold.skoleressurs.feidenavn || !undervisningsforhold.skoleressurs.feidenavn.identifikatorverdi) {
+      if (!undervisningsforhold.skoleressurs.feidenavn?.identifikatorverdi) {
         logger.warn("Undervisningsforhold med systemId {SystemId} har ingen skoleressurs med feidenavn tilknyttet, hopper over", undervisningsforhold.systemId.identifikatorverdi)
         return false
       }
@@ -300,7 +308,7 @@ export const updateUsersStudentsAndAccess = (
 
   const upsertTeacherAccess = (teacher: Teacher, accessEntry: ClassAutoAccessEntry | TeachingGroupAutoAccessEntry | ContactTeacherGroupAutoAccessEntry): void => {
     if (!teacher.entraUserId) {
-      logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
+      // logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
       return
     }
     let teacherAccess: DbAccess | NewDbAccess | undefined = updatedAccess.find((access: DbAccess | NewDbAccess) => access.entraUserId === teacher.entraUserId)
@@ -352,6 +360,7 @@ export const updateUsersStudentsAndAccess = (
   enterpriseApplicationUsers.forEach((enterpriseApplicationUser: User) => {
     upsertAppUser(enterpriseApplicationUser)
   })
+
   logger.info("Setter alle brukere som ikke finnes i enterprise-app til inactive")
   updatedAppUsers.forEach((appUser: DbAppUser | NewAppUser) => {
     if (!enterpriseApplicationUsers.some((enterpriseApplicationUser: User) => enterpriseApplicationUser.id === appUser.entra.id)) {
@@ -359,6 +368,7 @@ export const updateUsersStudentsAndAccess = (
       logger.info("Setter app-bruker {DisplayName} til inactive, da den ikke lenger finnes i EntraID", appUser.entra.displayName)
     }
   })
+
   logger.info("Synket ferdig litt entrabrukere")
 
   logger.info("Starter synk av elever og tilganger basert på FINT-data")
@@ -381,17 +391,17 @@ export const updateUsersStudentsAndAccess = (
     for (const elevforhold of validElevforhold) {
       const elev: FintElev = elevforhold.elev
 
-      if (!elev.systemId || !elev.systemId.identifikatorverdi) {
+      if (!elev.systemId?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen systemId, hopper over", elev.person.navn.fornavn)
         continue
       }
 
-      if (!elev.elevnummer || !elev.elevnummer.identifikatorverdi) {
+      if (!elev.elevnummer?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen elevnummer, hopper over", elev.person.navn.fornavn)
         continue
       }
 
-      if (!elev.feidenavn || !elev.feidenavn.identifikatorverdi) {
+      if (!elev.feidenavn?.identifikatorverdi) {
         logger.error("Elev {DisplayName} har ingen feidenavn, hopper over", elev.person.navn.fornavn)
         continue
       }

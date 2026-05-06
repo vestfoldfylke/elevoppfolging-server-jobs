@@ -1,4 +1,4 @@
-import type { ObjectId } from "mongodb"
+import type { Binary, ObjectId } from "mongodb"
 
 /** Undervisningsforhold & Skoleressurs */
 export type Teacher = {
@@ -23,6 +23,10 @@ export type GroupMembership = {
 /** Klasse */
 export type ClassGroup = Group & {
   teachers: Teacher[]
+}
+
+export type StudentClassGroup = ClassGroup & {
+  school: SchoolInfo
 }
 
 /** Klassemedlemskap */
@@ -124,6 +128,18 @@ export type DbAppStudent = NewAppStudent & {
   _id: ObjectId
 }
 
+export type UpdateAppStudent = AppStudent
+
+export type NewManualStudentInput = {
+  ssn: string
+  name: string
+  school: School
+}
+
+export type UpdateManualStudentInput = NewManualStudentInput & {
+  studentId: string
+}
+
 export type AccessEntryBase = {
   /** Hvem har gitt tilgangen */
   granted: EditorData
@@ -151,7 +167,7 @@ export type ProgramAreaManualAccessEntryInput = {
   schoolNumber: string
   /** Entydig identifikator (db _id) for hvilket undervisningsområde det er gitt tilgang til */
   _id: string
-  type: "MANUELL-UNDERVISNINGSOMRÅDE-TILGANG"
+  type: "MANUELL-PROGRAMOMRÅDE-TILGANG"
 }
 
 export type DbProgramAreaManualAccessEntry = Omit<ProgramAreaManualAccessEntry, "_id"> & {
@@ -268,9 +284,10 @@ export type DbAppUser = NewAppUser & {
 // PROGRAM AREA
 export type ProgramAreaInput = {
   name: string
+  schoolNumber: string
   classes: {
     systemId: string
-    name: string
+    fallbackName: string
   }[]
 }
 
@@ -300,6 +317,15 @@ export type DocumentParagraphItem = {
   value: string
 }
 
+export type DocumentInfoItem = {
+  type: "info"
+  value: string
+  link: {
+    url: string
+    text: string
+  }
+}
+
 export type DocumentTextInputItem = {
   type: "inputText"
   label: string
@@ -307,6 +333,10 @@ export type DocumentTextInputItem = {
   required: boolean
   placeholder?: string
   helpText?: string
+}
+
+export type EncryptedDocumentTextInputItem = Omit<DocumentTextInputItem, "value"> & {
+  value: Binary
 }
 
 export type DocumentTextAreaItem = {
@@ -344,18 +374,11 @@ export type DocumentCheckboxGroupItem = {
 
 export type DocumentInputItem = DocumentTextInputItem | DocumentTextAreaItem | DocumentRadioGroupItem | DocumentCheckboxGroupItem
 
-export type DocumentContentItem = DocumentHeaderItem | DocumentParagraphItem | DocumentInputItem
+export type DocumentContentItem = DocumentHeaderItem | DocumentParagraphItem | DocumentInfoItem | DocumentInputItem
 
 export type DocumentMessageBase = {
   created: EditorData
   modified: EditorData
-}
-
-export type DocumentCommentInput = {
-  type: "comment"
-  content: {
-    text: string
-  }
 }
 
 export type DocumentUpdateInput = {
@@ -364,17 +387,24 @@ export type DocumentUpdateInput = {
     title: string
     text: string
   }
+  emailAlertReceivers: string[]
 }
 
-export type DocumentMessageInput = DocumentCommentInput | DocumentUpdateInput
-
-export type DocumentComment = DocumentMessageBase & DocumentCommentInput
+export type DocumentMessageInput = DocumentUpdateInput
 
 export type DocumentUpdate = DocumentMessageBase & DocumentUpdateInput
 
-export type NewDocumentMessage = DocumentComment | DocumentUpdate
+export type NewDocumentMessage = DocumentUpdate
+
+export type NewDbEncryptedDocumentMessage = Omit<NewDocumentMessage, "content"> & {
+  content: Binary
+}
 
 export type DocumentMessage = NewDocumentMessage & {
+  messageId: string
+}
+
+export type DbEncryptedDocumentMessage = NewDbEncryptedDocumentMessage & {
   messageId: string
 }
 
@@ -382,6 +412,8 @@ export type DocumentBase = {
   created: EditorData
   modified: EditorData
 }
+
+export type DocumentAccess = "ALL_WITH_STUDENT_ACCESS" | "EXCLUDE_SUBJECT_TEACHERS"
 
 export type DocumentInput = {
   school: SchoolInfo
@@ -392,9 +424,8 @@ export type DocumentInput = {
     version: number
   }
   content: DocumentContentItem[]
-  /*
-  accessTypes: AccessEntry["type"][]
-  */
+  documentAccess: DocumentAccess
+  emailAlertReceivers: string[]
 }
 
 export type NewStudentDocument = DocumentBase &
@@ -406,6 +437,16 @@ export type NewStudentDocument = DocumentBase &
   }
 
 export type StudentDocumentUpdate = DocumentBase & DocumentInput
+
+export type DbEncryptedStudentDocumentUpdate = Omit<StudentDocumentUpdate, "title" | "content" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+}
 
 export type StudentDocument = NewStudentDocument & {
   _id: string
@@ -421,16 +462,80 @@ export type DbStudentDocument = NewDbStudentDocument & {
   _id: ObjectId
 }
 
+export type NewDbEncryptedStudentDocument = Omit<NewDbStudentDocument, "title" | "content" | "messages" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+  messages: DbEncryptedDocumentMessage[]
+}
+
+export type DbEncryptedStudentDocument = NewDbEncryptedStudentDocument & {
+  _id: ObjectId
+}
+
+export type NewGroupDocument = DocumentBase &
+  DocumentInput & {
+    messages: DocumentMessage[]
+    group: {
+      systemId: string
+    }
+  }
+
+export type GroupDocumentUpdate = DocumentBase & DocumentInput
+
+export type DbEncryptedGroupDocumentUpdate = Omit<GroupDocumentUpdate, "title" | "content" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+}
+
+export type GroupDocument = NewGroupDocument & {
+  _id: string
+}
+
+export type NewDbGroupDocument = Omit<NewGroupDocument, "group"> & {
+  group: {
+    systemId: string
+  }
+}
+
+export type DbGroupDocument = NewDbGroupDocument & {
+  _id: ObjectId
+}
+
+export type NewDbEncryptedGroupDocument = Omit<NewDbGroupDocument, "title" | "content" | "messages" | "template"> & {
+  template: {
+    _id: string
+    name: Binary
+    version: number
+  }
+  title: Binary
+  content: Binary
+  messages: DbEncryptedDocumentMessage[]
+}
+
+export type DbEncryptedGroupDocument = NewDbEncryptedGroupDocument & {
+  _id: ObjectId
+}
+
 export type AvailableForDocumentType = {
-  student: boolean
-  group: boolean
+  student?: boolean
+  group?: boolean
 }
 
 // Document content templates
 export type NewDocumentContentTemplate = {
   name: string
   version: number
-  availableForDocumentType: AvailableForDocumentType // Hmm might need explicit difference here if we add specific types for student documents (like fag-selector and so on)
+  availableForDocumentType: AvailableForDocumentType // might need explicit difference here if we add specific types for student documents (like fag-selector and so on)
   created: EditorData
   modified: EditorData
   content: DocumentContentItem[]
@@ -458,11 +563,19 @@ export type NewStudentCheckBox = StudentCheckBoxInput & {
   created: EditorData
 }
 
+export type NewDbEncryptedStudentCheckBox = Omit<NewStudentCheckBox, "value"> & {
+  value: Binary
+}
+
 export type StudentCheckBox = NewStudentCheckBox & {
   _id: string
 }
 
 export type DbStudentCheckBox = NewStudentCheckBox & {
+  _id: ObjectId
+}
+
+export type DbEncryptedStudentCheckBox = NewDbEncryptedStudentCheckBox & {
   _id: ObjectId
 }
 
@@ -501,10 +614,63 @@ export type NewDbStudentImportantStuff = NewStudentImportantStuff & {
   }
 }
 
+export type NewDbEncryptedStudentImportantStuff = Omit<NewDbStudentImportantStuff, "importantInfo"> & {
+  importantInfo: Binary
+}
+
 export type DbStudentImportantStuff = NewStudentImportantStuff & {
   _id: ObjectId
   student: {
     _id: ObjectId
+  }
+}
+
+export type DbEncryptedStudentImportantStuff = NewDbEncryptedStudentImportantStuff & {
+  _id: ObjectId
+  student: {
+    _id: ObjectId
+  }
+}
+
+export type GroupImportantStuffInput = {
+  school: SchoolInfo
+  importantInfo: string
+}
+
+export type NewGroupImportantStuff = ImportantStuffBase &
+  GroupImportantStuffInput & {
+    type: "GROUP"
+    lastActivityTimestamp: Date
+  }
+
+export type GroupImportantStuff = NewGroupImportantStuff & {
+  _id: string
+  group: {
+    systemId: string
+  }
+}
+
+export type NewDbGroupImportantStuff = NewGroupImportantStuff & {
+  group: {
+    systemId: string
+  }
+}
+
+export type NewDbEncryptedGroupImportantStuff = Omit<NewDbGroupImportantStuff, "importantInfo"> & {
+  importantInfo: Binary
+}
+
+export type DbGroupImportantStuff = NewGroupImportantStuff & {
+  _id: ObjectId
+  group: {
+    systemId: string
+  }
+}
+
+export type DbEncryptedGroupImportantStuff = NewDbEncryptedGroupImportantStuff & {
+  _id: ObjectId
+  group: {
+    systemId: string
   }
 }
 
@@ -542,3 +708,47 @@ export type DbStudentDataSharingConsent = StudentDataSharingConsentBase &
       _id: ObjectId
     }
   }
+
+// EMAIL ALERTS
+
+export type NewDbEmailAlert = {
+  type: "DOCUMENT_CREATED" | "DOCUMENT_MESSAGE_CREATED"
+  documentId: ObjectId
+  receivers: string[]
+  status: "QUEUED" | "SENT" | "FAILED"
+  created: EditorData
+}
+
+export type DbEmailAlert = NewDbEmailAlert & {
+  _id: ObjectId
+}
+
+// METRICS
+
+export type MetricLabel = [labelName: string, labelValue: string]
+
+export type MetricCount = {
+  /** Will be the visible name in Prometheus.<br />
+   *  A system-wide prefix will be added. See <b>metricNamePrefix</b> in handle-metrics.ts.<br />
+   *  If <u>splitMetricByLabels</u> is true, "\_By\_%labelName%" will be appended */
+  name: string
+  /** If <u>splitMetricByLabels</u> is true, " for %labelName%" will be appended */
+  description: string
+  labels?: MetricLabel[]
+  /** If set to true, the metric will be split into <u>x</u> metrics (<u>x</u> is the number of labels present (<b>metricResultName</b> not counted)) and "\_By\_%labelName%" will be appended to the metric name.<br />
+   *  If not set or set to false, all labels will be added to the metric as is.<br />
+   *  Default behavior: false*/
+  splitMetricByLabels?: boolean
+  /** Only applicable when <u>splitMetricByLabels</u> is <b>true</b>.<br />
+   *  If set to false, labels will not be added to the metric (<b>metricResultName</b> will be added anyway).<br />
+   *  If not set or set to true, splitted labels will be added to the metric (<b>metricResultName</b> will be added anyway).<br />
+   *  Default behavior: true */
+  includeLabelsInSplit?: boolean
+}
+
+export type MetricGauge = {
+  name: string
+  description: string
+  value: number
+  labels?: MetricLabel[]
+}
