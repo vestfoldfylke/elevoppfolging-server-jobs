@@ -19,74 +19,109 @@ import type {
 
 const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
-  if (!user) return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
+  if (!user) {
+    return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
+  }
 
   for (const classAccess of access.classes.filter((ca) => ca.type === "AUTOMATISK-KLASSE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === classAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${classAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${classAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const classToCheck: FintKlassemedlemskap | null | undefined = ef?.klassemedlemskap?.find((km) => km?.klasse.systemId.identifikatorverdi === classAccess.systemId)
-      if (!classToCheck) return false
+      if (!classToCheck) {
+        return false
+      }
+
       return classToCheck.klasse.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to class ${classAccess.systemId} at school ${classAccess.schoolNumber}`
       }
+    }
   }
 
   for (const groupAccess of access.teachingGroups.filter((ca) => ca.type === "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const groupToCheck: FintUndervisningsgruppemedlemskap | null | undefined = ef?.undervisningsgruppemedlemskap?.find(
         (km) => km?.undervisningsgruppe?.systemId?.identifikatorverdi === groupAccess.systemId
       )
-      if (!groupToCheck) return false
+      if (!groupToCheck) {
+        return false
+      }
+
       return groupToCheck.undervisningsgruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
       }
+    }
   }
 
   for (const groupAccess of access.contactTeacherGroups.filter((ca) => ca.type === "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const groupToCheck: FintKontaktlarergruppemedlemskap | null | undefined = ef?.kontaktlarergruppemedlemskap?.find(
         (km) => km?.kontaktlarergruppe.systemId.identifikatorverdi === groupAccess.systemId
       )
-      if (!groupToCheck) return false
+      if (!groupToCheck) {
+        return false
+      }
+
       return groupToCheck.kontaktlarergruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
       }
+    }
   }
+
   return { valid: true, reason: "" }
 }
 
 const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[], updatedSchools: (DbSchool | NewSchool)[]): { valid: boolean; reason: string } => {
   for (const enrollment of student.studentEnrollments.filter((enrollment) => enrollment.source === "AUTO")) {
     const school = schoolsWithStudents.find((s) => s.skole?.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
+    }
 
     const enrollmentInFint = school.skole?.elevforhold?.find((ef) => ef?.systemId.identifikatorverdi === enrollment.systemId)
-    if (!enrollmentInFint) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
-    if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
-    if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
+    if (!enrollmentInFint) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
+    }
+
+    if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
+    }
+
+    if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
+    }
+
     if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber) {
       return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
     }
@@ -95,18 +130,27 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!schoolInUpdatedSchools) {
       return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found in updated schools, but student-enrollment is active at this school` }
     }
+
     const allClassesPresent = enrollmentInFint.klassemedlemskap?.every((km) => {
       return enrollment.classMemberships.some((cm) => cm.systemId === km?.systemId.identifikatorverdi)
     })
-    if (!allClassesPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing class memberships` }
+    if (!allClassesPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing class memberships` }
+    }
+
     const allTeachingGroupsPresent = enrollmentInFint.undervisningsgruppemedlemskap?.every((ugm) => {
       return enrollment.teachingGroupMemberships.some((tgm) => tgm.systemId === ugm?.systemId.identifikatorverdi)
     })
-    if (!allTeachingGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing teaching group memberships` }
+    if (!allTeachingGroupsPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing teaching group memberships` }
+    }
+
     const allContactTeacherGroupsPresent = enrollmentInFint.kontaktlarergruppemedlemskap?.every((cgm) => {
       return enrollment.contactTeacherGroupMemberships.some((ctgm) => ctgm.systemId === cgm?.systemId.identifikatorverdi)
     })
-    if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
+    if (!allContactTeacherGroupsPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
+    }
   }
 
   return { valid: true, reason: "" }
@@ -246,21 +290,31 @@ describe("sync-db-data/users-students-and-access", () => {
     }
 
     const manualStudentSuddenlyInFint = getRandomElev([])
-    if (!manualStudentSuddenlyInFint) throw new Error("Mock data generation failed, manualStudentSuddenlyInFint not found")
+    if (!manualStudentSuddenlyInFint) {
+      throw new Error("Mock data generation failed, manualStudentSuddenlyInFint not found")
+    }
     // ManualStudentSuddenlyInFint har et aktivt elevforhold, lager et manuelt elevforhold på samme skole som vi definerer nedenfor, for å teste at det manuelle elevforholdet blir satt til inaktivt.
 
     const studentNameUpdate = getRandomElev([manualStudentSuddenlyInFint.elev]).elev
-    if (!studentNameUpdate) throw new Error("Mock data generation failed, no students found")
+    if (!studentNameUpdate) {
+      throw new Error("Mock data generation failed, no students found")
+    }
 
     const studentSsnUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate]).elev
-    if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
+    if (!studentSsnUpdate) {
+      throw new Error("Mock data generation failed, studentSsnUpdate not found")
+    }
 
     const studentSystemIdUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate]).elev
-    if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
+    if (!studentSystemIdUpdate) {
+      throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
+    }
 
     const studentWithManualEnrollment = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
-    if (!studentWithManualEnrollment) throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
-    studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainschool false
+    if (!studentWithManualEnrollment) {
+      throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
+    }
+    studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainSchool false
 
     const baseCurrentStudent: DbAppStudent = {
       _id: new ObjectId(),

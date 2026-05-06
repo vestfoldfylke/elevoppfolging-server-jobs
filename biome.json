@@ -25,6 +25,9 @@
           },
           "level": "error"
         }
+      },
+      "style": {
+        "useBlockStatements": "error"
       }
     }
   },
