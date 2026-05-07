@@ -36,7 +36,8 @@ requires following values in `./local.settings.json`
     "FINT_SCOPE": "fint-client",
     "FINT_TOKEN_URL": "https://idp.felleskomponent.no/nidp/oauth/nam/token",
     "FINT_API_URL": "https://api.felleskomponent.no", // use https://beta.felleskomponent.no for test environment
-    "FINT_VERSION": "4" // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+    "FINT_VERSION": "4", // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+    "FINT_ADDRESS_BLOCK": "SPERRET ADRESSE" // address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
   },
   "ConnectionStrings": {}
 }
@@ -46,34 +47,29 @@ requires following values in `./local.settings.json`
 
 ### Setup
 
+#### generate-fint-types
+
 Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
 
-```env
-# Set to "true" to enable mock FINT data mode
-MOCK_FINT=
-# Path to a .json file containing mock FINT data (required if MOCK_FINT is true)
-MOCK_FINT_DATA_PATH=
-# Application name (default: "elevoppfolging-server-jobs")
-APP_NAME=
-# Set to "true" to use a mock database client
-MOCK_DB=
-# Set to "true" to use a mock Entra client
-MOCK_ENTRA=
-# Suffix for Feide usernames (default: "fylke.no")
-FEIDENAME_SUFFIX=
-# MongoDB connection string (required for production)
-MONGODB_CONNECTION_STRING=
-# MongoDB database name (default: "elevoppfolging")
-MONGODB_DB_NAME=
-# Azure App Registration ID for the frontend (required unless MOCK_ENTRA is true)
-FRONTEND_APP_REGISTRATION_ID=
-
+```bash
 # Generer en FINT Bearer token og lim inn når generering av typer trengs
-FINT_GENERATE_TYPES_MANUAL_KEY=
+FINT_GENERATE_TYPES_MANUAL_KEY=""
 ```
 
+Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+
 #### generate-fint-mock-data
+
 Generates FINT-mock data and saves to local file - which is used as source data when running in mock-fint mode
+
+Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
+
+```bash
+# Address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
+FINT_ADDRESS_BLOCK="SPERRET ADRESSE"
+```
+
+Kjør `npm run generate-fint-mock-data`. Scriptet vil da hente data fra FINT API'et, og generere mock data i den angitte .json-filen.
 
 #### get-encryption-keys
 Gets (and creates if missing) a given number of data encryption keys (see script file)

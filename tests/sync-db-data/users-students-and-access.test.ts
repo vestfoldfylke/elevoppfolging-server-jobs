@@ -2,8 +2,9 @@ import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
+import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
-import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
+import { generateMockFintSchoolsWithStudents, getUniqueStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
@@ -16,6 +17,8 @@ import type {
   FintSchoolWithStudents,
   FintUndervisningsgruppemedlemskap
 } from "../../src/types/fint/fint-school-with-students.js"
+
+const minimumNumberOfStudentsWithBlockedAddress: number = 2
 
 const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
@@ -197,6 +200,7 @@ describe("repackPeriode", () => {
 
 describe("sync-db-data/users-students-and-access", () => {
   const mockConfig: GenerateMockFintSchoolsWithStudentsOptions = {
+    minimumNumberOfStudentsWithBlockedAddress,
     numberOfKlasser: 5,
     numberOfKontaktlarergrupper: 5,
     numberOfUndervisningsgrupper: 5,
@@ -207,6 +211,16 @@ describe("sync-db-data/users-students-and-access", () => {
   const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents(mockConfig)
 
   writeFileSync("./tests/sync-db-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))
+
+  describe("number of items in data is correct", () => {
+    it(`should be a minimum of ${minimumNumberOfStudentsWithBlockedAddress} number of students with blocked address`, () => {
+      const numberOfStudentsWithBlockedAddress: number = getUniqueStudents(mockSchools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
+      assert(
+        numberOfStudentsWithBlockedAddress >= minimumNumberOfStudentsWithBlockedAddress,
+        `Expected at least ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address, but found ${numberOfStudentsWithBlockedAddress}`
+      )
+    })
+  })
 
   describe("data is mapped correctly when only given mockSchools", () => {
     const result = updateUsersStudentsAndAccess([], [], [], [], mockSchools, [])

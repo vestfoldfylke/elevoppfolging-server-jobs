@@ -66,3 +66,5 @@ export const getFintConfig = (): FintConfig => {
     VERSION: `V${process.env.FINT_VERSION || "4"}`
   }
 }
+
+export const FINT_ADDRESS_BLOCK: string = process.env.FINT_ADDRESS_BLOCK || "SPERRET ADRESSE"

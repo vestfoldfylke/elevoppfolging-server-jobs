@@ -5,4 +5,5 @@ export type GenerateMockFintSchoolsWithStudentsOptions = {
   numberOfUndervisningsgrupper: number
   numberOfKontaktlarergrupper: number
   numberOfTeachers: number
+  minimumNumberOfStudentsWithBlockedAddress: number
 }

@@ -27,6 +27,9 @@ export type FintElev = {
     identifikatorverdi: string
   } | null
   person: {
+    bostedsadresse?: {
+      adresselinje: Array<string | null>
+    } | null
     fodselsnummer: {
       identifikatorverdi: string
     }

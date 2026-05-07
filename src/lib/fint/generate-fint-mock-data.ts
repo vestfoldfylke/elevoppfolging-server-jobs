@@ -1,5 +1,6 @@
 import { en, Faker, nb_NO } from "@faker-js/faker"
 import { logger } from "@vestfoldfylke/loglady"
+import { FINT_ADDRESS_BLOCK } from "../../config.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../types/fint/fint-mock.js"
 import type {
   FintElev,
@@ -57,6 +58,33 @@ const generateUniqueName = (): UniqueName => {
   generatedNames[randomName] = true
 
   return { firstName, lastName, feidePrefix }
+}
+
+const generateAddress = (): { adresselinje: Array<string | null> } | null => {
+  const randomNumber: number = norwegianFaker.number.int({ max: 1000 })
+
+  // student with blocked address
+  if ([42, 69, 666, 777].includes(randomNumber)) {
+    return {
+      adresselinje: [FINT_ADDRESS_BLOCK]
+    }
+  }
+
+  // student with no address at all
+  if ([43, 70, 667, 778].includes(randomNumber)) {
+    return null
+  }
+
+  // student with a single non-existing address
+  if ([41, 68, 665, 776].includes(randomNumber)) {
+    return {
+      adresselinje: [null]
+    }
+  }
+
+  return {
+    adresselinje: [norwegianFaker.location.streetAddress(false)]
+  }
 }
 
 const generateSkoleressurs = (): FintSkoleressurs => {
@@ -138,6 +166,7 @@ const generateElev = (): FintElev => {
       identifikatorverdi: `${uniqueName.feidePrefix}@fylke.no`
     },
     person: {
+      bostedsadresse: generateAddress(),
       navn: {
         fornavn: uniqueName.firstName,
         etternavn: uniqueName.lastName
@@ -193,6 +222,24 @@ const generateSchool = (name: string): FintSchoolWithStudents => {
       elevforhold: []
     }
   }
+}
+
+export const getUniqueStudents = (schools: FintSchoolWithStudents[], studentFunction: (student: FintElev) => boolean | undefined): FintElev[] => {
+  const uniqueStudents = new Map<string, FintElev>()
+
+  schools.forEach((school: FintSchoolWithStudents) => {
+    if (!Array.isArray(school.skole?.elevforhold)) {
+      return
+    }
+
+    school.skole.elevforhold.forEach((elevforhold: FintElevforhold | null) => {
+      if (elevforhold?.elev && studentFunction(elevforhold.elev)) {
+        uniqueStudents.set(elevforhold.elev.systemId.identifikatorverdi, elevforhold.elev)
+      }
+    })
+  })
+
+  return Array.from(uniqueStudents.values())
 }
 
 export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintSchoolsWithStudentsOptions): FintSchoolWithStudents[] => {
@@ -342,12 +389,49 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
     }
   })
 
+  let studentsWithAddressBlock: FintElev[] = getUniqueStudents(schools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK))
+
+  if (studentsWithAddressBlock.length < config.minimumNumberOfStudentsWithBlockedAddress) {
+    for (let i: number = 0; i < config.minimumNumberOfStudentsWithBlockedAddress - studentsWithAddressBlock.length; i++) {
+      let randomStudent: FintElev = schools[norwegianFaker.number.int({ min: 0, max: schools.length - 1 })].skole?.elevforhold?.[
+        norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })
+      ]?.elev as FintElev
+
+      while (randomStudent.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)) {
+        randomStudent = schools[norwegianFaker.number.int({ min: 0, max: schools.length - 1 })].skole?.elevforhold?.[norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })]
+          ?.elev as FintElev
+      }
+
+      randomStudent.person.bostedsadresse = {
+        adresselinje: [FINT_ADDRESS_BLOCK]
+      }
+    }
+
+    studentsWithAddressBlock = getUniqueStudents(schools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK))
+  }
+
+  const numberOfStudentsWithNoAddress: number = getUniqueStudents(schools, (elev: FintElev) => elev.person.bostedsadresse === null).length
+  const numberOfStudentsWithNullAddress: number = getUniqueStudents(schools, (elev: FintElev) => elev.person.bostedsadresse?.adresselinje?.includes(null)).length
+  const numberOfStudentsWithNonBlockedAddress: number = getUniqueStudents(
+    schools,
+    (elev: FintElev) => Array.isArray(elev.person.bostedsadresse?.adresselinje) && elev.person.bostedsadresse?.adresselinje.length > 0
+  ).length
+
+  logger.info(
+    "There are currently {StudentsWithAddressBlockCount} students with address block (for instance this student with feidenavn '{StudentWithAddressBlockFeideName}'), {StudentsWithNoAddressCount} students with no address, {StudentsWithNullAddressCount} students with null address and {StudentsWithNonBlockedAddressCount} students with non-blocked addresses in the generated data",
+    studentsWithAddressBlock.length,
+    studentsWithAddressBlock.length > 0 ? studentsWithAddressBlock[0].feidenavn?.identifikatorverdi : "N/A",
+    numberOfStudentsWithNoAddress,
+    numberOfStudentsWithNullAddress,
+    numberOfStudentsWithNonBlockedAddress
+  )
+
   return schools
 }
 
 /*
 
-- Når vi oppdaterer brukere - må vi plukke alle fra enterprise-appen og slenge de inn som brukere i basen.
-- Hvis MOCK, så kan vi også knytte opp enterprise brukerene (som har tilgang i mock) til noen random læere=
+- Når vi oppdaterer brukere - må vi plukke alle fra enterprise-app og slenge de inn som brukere i basen.
+- Hvis MOCK, så kan vi også knytte opp enterprise brukerne (som har tilgang i mock) til noen random lærere
 
 */
