@@ -397,7 +397,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
         norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })
       ]?.elev as FintElev
 
-      while (randomStudent.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)) {
+      while (!randomStudent || randomStudent.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)) {
         randomStudent = schools[norwegianFaker.number.int({ min: 0, max: schools.length - 1 })].skole?.elevforhold?.[norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })]
           ?.elev as FintElev
       }
