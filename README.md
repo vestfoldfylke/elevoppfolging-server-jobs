@@ -28,6 +28,8 @@ requires following values in `./local.settings.json`
     "MOCK_DB": "true",
     "FEIDENAME_SUFFIX": "suffix-used-in-feide",
     "APP_NAME": "Elevoppfølging",
+    "MONGODB_CONNECTION_STRING": "<connection-string>",
+    "MONGODB_DB_NAME": "<db-name>",
     // needs Utdanning permissions in FINT
     "FINT_USERNAME": "fint-username",
     "FINT_PASSWORD": "fint-password",
