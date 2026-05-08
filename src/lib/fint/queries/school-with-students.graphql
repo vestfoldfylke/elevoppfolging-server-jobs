@@ -9,6 +9,9 @@ fragment FintElev on Elev {
     identifikatorverdi
   }
   person {
+    bostedsadresse {
+      adresselinje
+    }
     fodselsnummer {
       identifikatorverdi
     }

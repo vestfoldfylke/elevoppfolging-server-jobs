@@ -6,12 +6,26 @@ import type { FintSchoolWithStudents } from "../src/types/fint/fint-school-with-
 logger.info("Generating mock FINT schools with students...")
 
 const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents({
+  minimumNumberOfStudentsWithBlockedAddress: 4,
   numberOfKlasser: 250,
   numberOfKontaktlarergrupper: 100,
   numberOfUndervisningsgrupper: 600,
   numberOfTeachers: 2000,
   numberOfStudents: 10000,
-  schoolNames: ["Mordor VGS", "Hobbitun VGS", "Gondor VGS"]
+  schools: [
+    {
+      name: "Mordor VGS",
+      schoolNumber: "55074744"
+    },
+    {
+      name: "Hobbitun VGS",
+      schoolNumber: "33362297"
+    },
+    {
+      name: "Gondor VGS",
+      schoolNumber: "17616906"
+    }
+  ]
 })
 
 if (!existsSync("./mock-data")) {

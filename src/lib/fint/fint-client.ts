@@ -14,6 +14,10 @@ type FintPayload = {
   variables?: FintQueryVariables
 }
 
+type WithError<T> = T & {
+  errors?: Array<unknown>
+}
+
 export class FintClient implements IFintClient {
   private readonly schoolWithStudentsQuery: string
 
@@ -113,14 +117,14 @@ export class FintClient implements IFintClient {
     if (!response.ok) {
       const error = await response.json()
       logger.error("Failed to call FINT {FintVersion} graphql endpoint. Status: {Status}. StatusText: {StatusText}. Error: {@Error}", authOptions.VERSION, response.status, response.statusText, error)
-      throw new Error(`Failed to call FINT ${authOptions.VERSION} graphql endpoint. Status: ${response.status}. StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`)
+      throw new Error(`Failed to call FINT ${authOptions.VERSION} graphql endpoint. Status: ${response.status}. StatusText: ${response.statusText}`)
     }
 
-    const graphqlResponse: T = await response.json()
+    const graphqlResponse: WithError<T> = await response.json()
 
-    if ("errors" in (graphqlResponse as object)) {
-      logger.error("Errors occured when calling FINT {FintVersion} graphql endpoint", authOptions.VERSION)
-      throw new Error(`Errors occured when calling FINT ${authOptions.VERSION} graphql endpoint: ${JSON.stringify(graphqlResponse)}`)
+    if (graphqlResponse.errors) {
+      logger.error("{ErrorCount} errors occured when calling FINT {FintVersion} graphql endpoint", graphqlResponse.errors.length, authOptions.VERSION)
+      throw new Error(`${graphqlResponse.errors.length} errors occured when calling FINT ${authOptions.VERSION} graphql endpoint`)
     }
 
     logger.info("Successfully called FINT {FintVersion} graphql endpoint", authOptions.VERSION)
@@ -147,7 +151,7 @@ export class FintClient implements IFintClient {
     if (!response.ok) {
       const error = await response.json()
       logger.error("Failed to call FINT {FintVersion} REST endpoint. Status: {Status}. StatusText: {StatusText}. Error: {@Error}", authOptions.VERSION, response.status, response.statusText, error)
-      throw new Error(`Failed to call FINT ${authOptions.VERSION} REST endpoint. Status: ${response.status}. StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`)
+      throw new Error(`Failed to call FINT ${authOptions.VERSION} REST endpoint. Status: ${response.status}. StatusText: ${response.statusText}`)
     }
 
     const restResponse: T = await response.json()

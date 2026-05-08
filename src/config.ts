@@ -28,11 +28,11 @@ export const MONGODB = {
   }
 }
 
-if (!MOCK_ENTRA && !process.env.FRONTEND_APP_REGISTRATION_ID) {
-  throw new Error("FRONTEND_APP_REGISTRATION_ID must be set when not using MOCK_ENTRA")
+if (!MOCK_ENTRA && !process.env.FRONTEND_APP_CLIENT_ID) {
+  throw new Error("FRONTEND_APP_CLIENT_ID must be set when not using MOCK_ENTRA")
 }
 
-export const FRONTEND_APP_REGISTRATION_ID = process.env.FRONTEND_APP_REGISTRATION_ID
+export const FRONTEND_APP_CLIENT_ID = process.env.FRONTEND_APP_CLIENT_ID
 
 export const getFintConfig = (): FintConfig => {
   const username: string | undefined = process.env.FINT_USERNAME
@@ -66,3 +66,5 @@ export const getFintConfig = (): FintConfig => {
     VERSION: `V${process.env.FINT_VERSION || "4"}`
   }
 }
+
+export const FINT_ADDRESS_BLOCK: string = process.env.FINT_ADDRESS_BLOCK || "SPERRET ADRESSE"

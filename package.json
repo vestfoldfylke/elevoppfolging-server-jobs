@@ -16,7 +16,7 @@
     "lint": "npx @biomejs/biome check",
     "lint:fix": "npx @biomejs/biome check --write",
     "generate-fint-types": "node --env-file=.env node_modules/.bin/graphql-codegen",
-    "generate-fint-mock-data": "node --import tsx ./scripts/generate-fint-mock-data.ts",
+    "generate-fint-mock-data": "node --env-file=.env --import tsx ./scripts/generate-fint-mock-data.ts",
     "get-encryption-keys": "node --env-file=.env --import tsx ./scripts/get-and-create-if-not-exists-encryption-keys.ts",
     "rewrap-encryption-keys": "node --env-file=.env --import tsx ./scripts/rewrap-encryption-keys.ts"
   },

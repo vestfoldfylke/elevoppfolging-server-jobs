@@ -1,9 +1,12 @@
 import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
+import { en, Faker, nb_NO } from "@faker-js/faker"
 import { ObjectId } from "mongodb"
+import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
+import { getUniqueStudents } from "../../src/lib/fint/utils.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
@@ -17,76 +20,113 @@ import type {
   FintUndervisningsgruppemedlemskap
 } from "../../src/types/fint/fint-school-with-students.js"
 
+const minimumNumberOfStudentsWithBlockedAddress: number = 2
+
 const isValidAutoAccess = (access: DbAccess | NewDbAccess, schoolsWithStudents: FintSchoolWithStudents[], users: (DbAppUser | NewAppUser)[]): { valid: boolean; reason: string } => {
   const user = users.find((user) => user.entra.id === access.entraUserId)
-  if (!user) return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
+  if (!user) {
+    return { valid: false, reason: `User with entra ID ${access.entraUserId} not found` }
+  }
 
   for (const classAccess of access.classes.filter((ca) => ca.type === "AUTOMATISK-KLASSE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === classAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${classAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${classAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const classToCheck: FintKlassemedlemskap | null | undefined = ef?.klassemedlemskap?.find((km) => km?.klasse.systemId.identifikatorverdi === classAccess.systemId)
-      if (!classToCheck) return false
+      if (!classToCheck) {
+        return false
+      }
+
       return classToCheck.klasse.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to class ${classAccess.systemId} at school ${classAccess.schoolNumber}`
       }
+    }
   }
 
   for (const groupAccess of access.teachingGroups.filter((ca) => ca.type === "AUTOMATISK-UNDERVISNINGSGRUPPE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const groupToCheck: FintUndervisningsgruppemedlemskap | null | undefined = ef?.undervisningsgruppemedlemskap?.find(
         (km) => km?.undervisningsgruppe?.systemId?.identifikatorverdi === groupAccess.systemId
       )
-      if (!groupToCheck) return false
+      if (!groupToCheck) {
+        return false
+      }
+
       return groupToCheck.undervisningsgruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
       }
+    }
   }
 
   for (const groupAccess of access.contactTeacherGroups.filter((ca) => ca.type === "AUTOMATISK-KONTAKTLÆRERGRUPPE-TILGANG")) {
     const school = schoolsWithStudents.find((school) => school.skole?.skolenummer.identifikatorverdi === groupAccess.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${groupAccess.schoolNumber} not found` }
+    }
+
     const shouldHaveAccess = school.skole?.elevforhold?.some((ef) => {
       const groupToCheck: FintKontaktlarergruppemedlemskap | null | undefined = ef?.kontaktlarergruppemedlemskap?.find(
         (km) => km?.kontaktlarergruppe.systemId.identifikatorverdi === groupAccess.systemId
       )
-      if (!groupToCheck) return false
+      if (!groupToCheck) {
+        return false
+      }
+
       return groupToCheck.kontaktlarergruppe.undervisningsforhold?.some((uf) => {
         return uf?.skoleressurs.feidenavn?.identifikatorverdi && uf.skoleressurs.feidenavn.identifikatorverdi === user.feideName
       })
     })
-    if (!shouldHaveAccess)
+    if (!shouldHaveAccess) {
       return {
         valid: false,
         reason: `User with entra ID ${access.entraUserId} (feidenavn ${user.feideName}) should not have access to group ${groupAccess.systemId} at school ${groupAccess.schoolNumber}`
       }
+    }
   }
+
   return { valid: true, reason: "" }
 }
 
 const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWithStudents[], updatedSchools: (DbSchool | NewSchool)[]): { valid: boolean; reason: string } => {
   for (const enrollment of student.studentEnrollments.filter((enrollment) => enrollment.source === "AUTO")) {
     const school = schoolsWithStudents.find((s) => s.skole?.skolenummer.identifikatorverdi === enrollment.school.schoolNumber)
-    if (!school) return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
+    if (!school) {
+      return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found` }
+    }
 
     const enrollmentInFint = school.skole?.elevforhold?.find((ef) => ef?.systemId.identifikatorverdi === enrollment.systemId)
-    if (!enrollmentInFint) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
-    if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
-    if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
+    if (!enrollmentInFint) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} not found in school ${enrollment.school.schoolNumber}` }
+    }
+
+    if (enrollmentInFint.elev.feidenavn?.identifikatorverdi !== student.feideName) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched feideName` }
+    }
+
+    if (enrollmentInFint.elev.person.fodselsnummer.identifikatorverdi !== student.ssn) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched ssn` }
+    }
+
     if (enrollmentInFint.elev.elevnummer?.identifikatorverdi !== student.studentNumber) {
       return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} has mismatched student number` }
     }
@@ -95,18 +135,27 @@ const studentIsValid = (student: DbAppStudent, schoolsWithStudents: FintSchoolWi
     if (!schoolInUpdatedSchools) {
       return { valid: false, reason: `School with school number ${enrollment.school.schoolNumber} not found in updated schools, but student-enrollment is active at this school` }
     }
+
     const allClassesPresent = enrollmentInFint.klassemedlemskap?.every((km) => {
       return enrollment.classMemberships.some((cm) => cm.systemId === km?.systemId.identifikatorverdi)
     })
-    if (!allClassesPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing class memberships` }
+    if (!allClassesPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing class memberships` }
+    }
+
     const allTeachingGroupsPresent = enrollmentInFint.undervisningsgruppemedlemskap?.every((ugm) => {
       return enrollment.teachingGroupMemberships.some((tgm) => tgm.systemId === ugm?.systemId.identifikatorverdi)
     })
-    if (!allTeachingGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing teaching group memberships` }
+    if (!allTeachingGroupsPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing teaching group memberships` }
+    }
+
     const allContactTeacherGroupsPresent = enrollmentInFint.kontaktlarergruppemedlemskap?.every((cgm) => {
       return enrollment.contactTeacherGroupMemberships.some((ctgm) => ctgm.systemId === cgm?.systemId.identifikatorverdi)
     })
-    if (!allContactTeacherGroupsPresent) return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
+    if (!allContactTeacherGroupsPresent) {
+      return { valid: false, reason: `Enrollment with system ID ${enrollment.systemId} is missing contact teacher group memberships` }
+    }
   }
 
   return { valid: true, reason: "" }
@@ -152,17 +201,40 @@ describe("repackPeriode", () => {
 })
 
 describe("sync-db-data/users-students-and-access", () => {
+  const faker = new Faker({
+    locale: [en, nb_NO]
+  })
   const mockConfig: GenerateMockFintSchoolsWithStudentsOptions = {
+    minimumNumberOfStudentsWithBlockedAddress,
     numberOfKlasser: 5,
     numberOfKontaktlarergrupper: 5,
     numberOfUndervisningsgrupper: 5,
     numberOfTeachers: 5,
     numberOfStudents: 10,
-    schoolNames: ["School 1", "School 2"]
+    schools: [
+      {
+        name: "School 1",
+        schoolNumber: faker.string.numeric(8)
+      },
+      {
+        name: "School 2",
+        schoolNumber: faker.string.numeric(8)
+      }
+    ]
   }
   const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents(mockConfig)
 
   writeFileSync("./tests/sync-db-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))
+
+  describe("number of items in data is correct", () => {
+    it(`should be a minimum of ${minimumNumberOfStudentsWithBlockedAddress} number of students with blocked address`, () => {
+      const numberOfStudentsWithBlockedAddress: number = getUniqueStudents(mockSchools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
+      assert(
+        numberOfStudentsWithBlockedAddress >= minimumNumberOfStudentsWithBlockedAddress,
+        `Expected at least ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address, but found ${numberOfStudentsWithBlockedAddress}`
+      )
+    })
+  })
 
   describe("data is mapped correctly when only given mockSchools", () => {
     const result = updateUsersStudentsAndAccess([], [], [], [], mockSchools, [])
@@ -246,21 +318,31 @@ describe("sync-db-data/users-students-and-access", () => {
     }
 
     const manualStudentSuddenlyInFint = getRandomElev([])
-    if (!manualStudentSuddenlyInFint) throw new Error("Mock data generation failed, manualStudentSuddenlyInFint not found")
+    if (!manualStudentSuddenlyInFint) {
+      throw new Error("Mock data generation failed, manualStudentSuddenlyInFint not found")
+    }
     // ManualStudentSuddenlyInFint har et aktivt elevforhold, lager et manuelt elevforhold på samme skole som vi definerer nedenfor, for å teste at det manuelle elevforholdet blir satt til inaktivt.
 
     const studentNameUpdate = getRandomElev([manualStudentSuddenlyInFint.elev]).elev
-    if (!studentNameUpdate) throw new Error("Mock data generation failed, no students found")
+    if (!studentNameUpdate) {
+      throw new Error("Mock data generation failed, no students found")
+    }
 
     const studentSsnUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate]).elev
-    if (!studentSsnUpdate) throw new Error("Mock data generation failed, studentSsnUpdate not found")
+    if (!studentSsnUpdate) {
+      throw new Error("Mock data generation failed, studentSsnUpdate not found")
+    }
 
     const studentSystemIdUpdate = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate]).elev
-    if (!studentSystemIdUpdate) throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
+    if (!studentSystemIdUpdate) {
+      throw new Error("Mock data generation failed, studentSystemIdUpdate not found")
+    }
 
     const studentWithManualEnrollment = getRandomElev([manualStudentSuddenlyInFint.elev, studentNameUpdate, studentSsnUpdate, studentSystemIdUpdate])
-    if (!studentWithManualEnrollment) throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
-    studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainschool false
+    if (!studentWithManualEnrollment) {
+      throw new Error("Mock data generation failed, studentWithManualEnrollment not found")
+    }
+    studentWithManualEnrollment.elevforhold.hovedskole = true // To test that manual enrollment get set to mainSchool false
 
     const baseCurrentStudent: DbAppStudent = {
       _id: new ObjectId(),
@@ -464,21 +546,21 @@ describe("sync-db-data/users-students-and-access", () => {
     const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, currentSchools, mockSchools, mockEntraUsers)
     writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
 
-    it("should create students without duplicates", () => {
+    await it("should create students without duplicates", () => {
       // find duplicate students
       const studentIds = result.updatedStudents.map((s) => s.feideName)
       const uniqueStudentIds = new Set(studentIds)
       assert(studentIds.length === uniqueStudentIds.size, `Expected no duplicate students, but ${studentIds.length - uniqueStudentIds.size} duplicates found`)
     })
 
-    it("should only return valid auto access entries", () => {
+    await it("should only return valid auto access entries", () => {
       for (const access of result.updatedAccess) {
         const validation = isValidAutoAccess(access, mockSchools, result.updatedAppUsers)
         assert(validation.valid, `Access validation failed: ${validation.reason}`)
       }
     })
 
-    it("should preserve manual enrollments and set them to inactive when student suddenly appears in FINT with active enrollment at the same school", () => {
+    await it("should preserve manual enrollments and set them to inactive when student suddenly appears in FINT with active enrollment at the same school", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === manualStudentSuddenlyInFint.elev.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       const manualEnrollment = updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold-som-skal-bli-inaktivt")
@@ -486,11 +568,11 @@ describe("sync-db-data/users-students-and-access", () => {
       assert(manualEnrollment.period.end !== null, "Expected manual enrollment to have an end date after being set to inactive")
       assert(manualEnrollment.period.end && manualEnrollment.period.end < new Date(), `Expected manual enrollment to be set to inactive, got end=${manualEnrollment.period.end}`)
       assert(manualEnrollment.classMemberships.length === 1, `Expected manual enrollment to still have class memberships, got ${manualEnrollment.classMemberships.length}`)
-      assert(manualEnrollment.mainSchool === false, `Expected manual enrollment mainSchool to be set to false, got ${manualEnrollment.mainSchool}`)
+      assert(!manualEnrollment.mainSchool, `Expected manual enrollment mainSchool to be set to false, got ${manualEnrollment.mainSchool}`)
       assert(updatedStudent.source === "AUTO", `Expected student source to be updated to AUTO, got ${updatedStudent.source}`)
     })
 
-    it("should update existing student name and student number correctly", () => {
+    await it("should update existing student name and student number correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentNameUpdate.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(!updatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes"), "Expected old enrollment to be removed")
@@ -504,7 +586,7 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should update existing student ssn correctly", () => {
+    await it("should update existing student ssn correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.systemId === studentSsnUpdate.systemId.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(
@@ -513,7 +595,7 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should update existing student systemId correctly", () => {
+    await it("should update existing student systemId correctly", () => {
       const updatedStudent = result.updatedStudents.find((s) => s.ssn === studentSystemIdUpdate.person.fodselsnummer.identifikatorverdi)
       assert(updatedStudent, "Updated student not found")
       assert(
@@ -522,25 +604,25 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should remove auto enrollments when student is no longer in FINT", () => {
+    await it("should remove auto enrollments when student is no longer in FINT", () => {
       const deactivatedStudent = result.updatedStudents.find((s) => s.systemId === "jeg-finnes-ikke-i-fint-lenger")
       assert(deactivatedStudent, "Deactivated student not found")
       assert(deactivatedStudent.name === "Et navn som ikke skal oppdateres", `Expected student name to be unchanged, got "${deactivatedStudent.name}"`)
       assert(!deactivatedStudent.studentEnrollments.find((enrollment) => enrollment.systemId === "elevforhold-som-skal-fjernes-2"), "Expected enrollment to be removed")
     })
 
-    it("should preserve manual enrollments and related access when student is still in FINT", () => {
+    await it("should preserve manual enrollments and related access when student is still in FINT", () => {
       const student = result.updatedStudents.find((s) => s.feideName === studentWithManualEnrollment.elev.feidenavn?.identifikatorverdi)
       assert(student, "Student with manual enrollment not found")
       const manualEnrollment = student.studentEnrollments.find((enrollment) => enrollment.systemId === "manual-elevforhold")
       assert(manualEnrollment, "Expected manual enrollment to be preserved")
       assert(manualEnrollment.classMemberships.length === 1, "Expected class memberships of manual enrollment to be preserved")
-      assert(manualEnrollment.mainSchool === false, "Expected mainSchool of manual enrollment to be set to false, but got true")
+      assert(!manualEnrollment.mainSchool, "Expected mainSchool of manual enrollment to be set to false, but got true")
       assert(manualEnrollment.period.end === null, `Expected manual enrollment to still be active with end date null, but got end date ${manualEnrollment.period.end}`)
       assert(manualEnrollment.period.start instanceof Date, `Expected manual enrollment period start to be a Date, but got ${typeof manualEnrollment.period.start}`)
     })
 
-    it("should update existing access correctly", () => {
+    await it("should update existing access correctly", () => {
       const updatedAccess = result.updatedAccess.find((a) => (a as DbAccess)._id.toString() === existingAccessId.toString())
       assert(updatedAccess, "Updated access not found")
       console.log(
@@ -563,31 +645,31 @@ describe("sync-db-data/users-students-and-access", () => {
       )
     })
 
-    it("should create valid students", () => {
+    await it("should create valid students", () => {
       for (const student of result.updatedStudents) {
         const validation = studentIsValid(student as DbAppStudent, mockSchools, result.updatedSchools)
         assert(validation.valid, `Student validation failed: ${validation.reason}`)
       }
     })
 
-    it("should preserve previous schools when updating", () => {
+    await it("should preserve previous schools when updating", () => {
       const preservedSchool = result.updatedSchools.find((s) => s.schoolNumber === "42" && "_id" in s && s._id.toString() === tullVgsId.toString())
       assert(preservedSchool, "Expected to find preserved school, but not found")
     })
 
-    it("Should set active to false for users that are no longer active in Entra", () => {
+    await it("Should set active to false for users that are no longer active in Entra", () => {
       const inactiveUser: DbAppUser | NewAppUser | undefined = result.updatedAppUsers.find((user) => {
         return "_id" in user && user._id.toString() === existingUserIdThatShouldBeInactive.toString()
       })
       assert(inactiveUser, "Inactive user not found")
-      assert(inactiveUser.active === false, `Expected user to be inactive, got active=${inactiveUser.active}`)
+      assert(!inactiveUser.active, `Expected user to be inactive, got active=${inactiveUser.active}`)
     })
 
-    it("Should link existing Entra users to MOCK FINT teachers, and set feidename for AppUser based on linked teacher", async () => {
+    await it("Should link existing Entra users to MOCK FINT teachers, and set feidename for AppUser based on linked teacher", async () => {
       for (const entraUser of mockEntraUsers) {
         const user = result.updatedAppUsers.find((appUser) => appUser.entra.id === entraUser.id)
         assert(user, `Expected to find user with Entra ID ${entraUser.id}, but not found`)
-        assert(user.active === true, `Expected user with Entra ID ${entraUser.id} to be active, got active=${user.active}`)
+        assert(user.active, `Expected user with Entra ID ${entraUser.id} to be active, got active=${user.active}`)
         assert(
           entraUser.onPremisesSamAccountName && !user.feideName.startsWith(entraUser.onPremisesSamAccountName),
           `Expected feideName for user with Entra ID ${entraUser.id} to be updated with a random MOCK-teachers feidenavn, got feideName=${user.feideName} and onPremisesSamAccountName=${entraUser.onPremisesSamAccountName}`

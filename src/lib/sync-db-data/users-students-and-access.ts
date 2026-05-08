@@ -1,7 +1,7 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
 import { BSON, type Document, ObjectId } from "mongodb"
-import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
+import { APP_NAME, FEIDENAME_SUFFIX, FINT_ADDRESS_BLOCK, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
   ClassMembership,
@@ -71,6 +71,8 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
 const cloneDbDocument = <T extends Document>(doc: T): T => {
   return BSON.deserialize(BSON.serialize(doc)) as T
 }
+
+const hasElevBlockedAddress = (elev: FintElev): boolean => elev.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK) || false
 
 export const updateUsersStudentsAndAccess = (
   currentAppUsers: DbAppUser[],
@@ -311,6 +313,7 @@ export const updateUsersStudentsAndAccess = (
       // logger.warn("Kan ikke oppdatere tilgang for lærer {TeacherName} uten app-bruker-entra-id", teacher.name)
       return
     }
+
     let teacherAccess: DbAccess | NewDbAccess | undefined = updatedAccess.find((access: DbAccess | NewDbAccess) => access.entraUserId === teacher.entraUserId)
     if (!teacherAccess) {
       teacherAccess = {
@@ -326,6 +329,7 @@ export const updateUsersStudentsAndAccess = (
       }
       updatedAccess.push(teacherAccess)
     }
+
     switch (accessEntry.type) {
       case "AUTOMATISK-KLASSE-TILGANG": {
         const alreadyHasClassAccess = teacherAccess.classes.some((entry) => entry.systemId === accessEntry.systemId)
@@ -380,7 +384,7 @@ export const updateUsersStudentsAndAccess = (
 
     const school: SchoolInfo = repackSchool(schoolWithStudents.skole)
 
-    logger.info("Behandler eleveforhold for skole {SchoolName} ({SchoolNumber})", school.name, school.schoolNumber)
+    logger.info("Behandler elevforhold for skole {SchoolName} ({SchoolNumber})", school.name, school.schoolNumber)
 
     const validElevforhold: FintElevforhold[] = getValidGraphQlArray<FintElevforhold, FintElevforhold[]>(
       schoolWithStudents.skole.elevforhold,
@@ -406,7 +410,12 @@ export const updateUsersStudentsAndAccess = (
         continue
       }
 
-      logger.info("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
+      const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
+      if (hasStudentBlockedAddress) {
+        logger.warn("Døtter inn denne elevkødden: {DisplayName} 🚨 MED SPERRET ADRESSE 🚨", elev.person.navn.fornavn)
+      } else {
+        logger.info("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
+      }
 
       const studentEnrollment: StudentEnrollment = {
         systemId: elevforhold.systemId.identifikatorverdi,
@@ -421,6 +430,7 @@ export const updateUsersStudentsAndAccess = (
 
       // Går gjennom klassemedlemskap for å oppdatere lærer-tilganger - deretter kontaklærergruppemedlemskap og undervisningsgruppemedlemskap
       logger.info("Oppdaterer lærer-tilganger for elev {StudentName}", elev.person.navn.fornavn)
+
       for (const classMembership of studentEnrollment.classMemberships) {
         for (const teacher of classMembership.classGroup.teachers) {
           const accessEntry: ClassAutoAccessEntry = {
@@ -433,6 +443,7 @@ export const updateUsersStudentsAndAccess = (
           upsertTeacherAccess(teacher, accessEntry)
         }
       }
+
       for (const teachingGroupMembership of studentEnrollment.teachingGroupMemberships) {
         for (const teacher of teachingGroupMembership.teachingGroup.teachers) {
           const accessEntry: TeachingGroupAutoAccessEntry = {
@@ -445,6 +456,7 @@ export const updateUsersStudentsAndAccess = (
           upsertTeacherAccess(teacher, accessEntry)
         }
       }
+
       for (const contactTeacherGroupMembership of studentEnrollment.contactTeacherGroupMemberships) {
         for (const teacher of contactTeacherGroupMembership.contactTeacherGroup.teachers) {
           const accessEntry: ContactTeacherGroupAutoAccessEntry = {
@@ -471,7 +483,8 @@ export const updateUsersStudentsAndAccess = (
           studentEnrollments: [],
           created: editorData,
           modified: editorData,
-          source: "AUTO"
+          source: "AUTO",
+          hasBlockedAddress: hasStudentBlockedAddress
         }
         updatedStudents.push(currentStudent)
       } else {
@@ -487,7 +500,9 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
+        currentStudent.hasBlockedAddress = hasStudentBlockedAddress
       }
+
       currentStudent.studentEnrollments.push(studentEnrollment)
     }
   }
@@ -499,6 +514,10 @@ export const updateUsersStudentsAndAccess = (
     // Set _id to ObjectId again (removed by JSON.parse/stringify)
     if ("_id" in student) {
       student._id = new ObjectId(student._id)
+    }
+
+    if (!("hasBlockedAddress" in student)) {
+      student.hasBlockedAddress = false
     }
 
     if (student.studentEnrollments.length === 0) {
@@ -542,7 +561,7 @@ export const updateUsersStudentsAndAccess = (
       }
     })
 
-    // Check if this i a new school - add it to updatedSchools if it doesn't exist already (AUTO if it comes from FINT, MANUAL if it for some weird reason doesn't)
+    // Check if this is a new school - add it to updatedSchools if it doesn't exist already (AUTO if it comes from FINT, MANUAL if it for some weird reason doesn't)
     student.studentEnrollments.forEach((enrollment) => {
       if (!updatedSchools.some((school) => school.schoolNumber === enrollment.school.schoolNumber)) {
         updatedSchools.push({

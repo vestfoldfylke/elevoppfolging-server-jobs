@@ -28,6 +28,12 @@ requires following values in `./local.settings.json`
     "MOCK_DB": "true",
     "FEIDENAME_SUFFIX": "suffix-used-in-feide",
     "APP_NAME": "Elevoppfølging",
+    "MONGODB_CONNECTION_STRING": "<connection-string>",
+    "MONGODB_DB_NAME": "<db-name>",
+    "FRONTEND_APP_CLIENT_ID": "",
+    "AZURE_TENANT_ID": "<tenant-id>",
+    "AZURE_CLIENT_ID": "<client-id>", // Client (service principal) must have key-vault-administrator role on the key-vault
+    "AZURE_CLIENT_SECRET": "<client-secret>",
     // needs Utdanning permissions in FINT
     "FINT_USERNAME": "fint-username",
     "FINT_PASSWORD": "fint-password",
@@ -36,7 +42,8 @@ requires following values in `./local.settings.json`
     "FINT_SCOPE": "fint-client",
     "FINT_TOKEN_URL": "https://idp.felleskomponent.no/nidp/oauth/nam/token",
     "FINT_API_URL": "https://api.felleskomponent.no", // use https://beta.felleskomponent.no for test environment
-    "FINT_VERSION": "4" // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+    "FINT_VERSION": "4", // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+    "FINT_ADDRESS_BLOCK": "SPERRET ADRESSE" // address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
   },
   "ConnectionStrings": {}
 }
@@ -44,10 +51,33 @@ requires following values in `./local.settings.json`
 
 ## Scripts
 
-### generate-fint-mock-data
+### Setup
+
+#### generate-fint-types
+
+Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
+
+```bash
+# Generer en FINT Bearer token og lim inn når generering av typer trengs
+FINT_GENERATE_TYPES_MANUAL_KEY=""
+```
+
+Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+
+#### generate-fint-mock-data
+
 Generates FINT-mock data and saves to local file - which is used as source data when running in mock-fint mode
 
-### get-encryption-keys
+Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
+
+```bash
+# Address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
+FINT_ADDRESS_BLOCK="SPERRET ADRESSE"
+```
+
+Kjør `npm run generate-fint-mock-data`. Scriptet vil da hente data fra FINT API'et, og generere mock data i den angitte .json-filen.
+
+#### get-encryption-keys
 Gets (and creates if missing) a given number of data encryption keys (see script file)
 Must be run before initial startup of elevoppfølging web app for it to work.
 
@@ -65,7 +95,7 @@ MONGODB_CONNECTION_STRING="<connection-string>"
 MONGODB_DB_NAME="<db-name>"
 ```
 
-### rewrap-encryption-keys
+#### rewrap-encryption-keys
 Decrypts all data encryption keys, and reencrypts them with the new master key
 
 requires following values in `./.env`
