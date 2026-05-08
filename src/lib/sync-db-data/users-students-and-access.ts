@@ -516,6 +516,10 @@ export const updateUsersStudentsAndAccess = (
       student._id = new ObjectId(student._id)
     }
 
+    if (!("hasBlockedAddress" in student)) {
+      student.hasBlockedAddress = false
+    }
+
     if (student.studentEnrollments.length === 0) {
       return
     }
