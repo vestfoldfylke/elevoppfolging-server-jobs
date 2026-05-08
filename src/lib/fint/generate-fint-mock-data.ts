@@ -1,7 +1,7 @@
 import { en, Faker, nb_NO } from "@faker-js/faker"
 import { logger } from "@vestfoldfylke/loglady"
 import { FINT_ADDRESS_BLOCK } from "../../config.js"
-import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../types/fint/fint-mock.js"
+import type { GenerateMockFintSchoolsWithStudentsOptions, MockFintSchool } from "../../types/fint/fint-mock.js"
 import type {
   FintElev,
   FintElevforhold,
@@ -213,23 +213,23 @@ const generateElevforhold = (elev: FintElev, klasse: FintKlasse[], undervisnings
   }
 }
 
-const generateSchool = (name: string): FintSchoolWithStudents => {
+const generateSchool = (school: MockFintSchool): FintSchoolWithStudents => {
   return {
     skole: {
       skolenummer: {
-        identifikatorverdi: norwegianFaker.string.numeric(8)
+        identifikatorverdi: school.schoolNumber
       },
-      navn: name,
+      navn: school.name,
       elevforhold: []
     }
   }
 }
 
 export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintSchoolsWithStudentsOptions): FintSchoolWithStudents[] => {
-  if (config.schoolNames.length < 2) {
+  if (config.schools.length < 2) {
     throw new Error("At least two schools must be provided")
   }
-  if (config.numberOfStudents < config.schoolNames.length) {
+  if (config.numberOfStudents < config.schools.length) {
     throw new Error("Number of students must be at least equal to number of schools")
   }
   if (config.numberOfKlasser < 5 || config.numberOfKontaktlarergrupper < 5 || config.numberOfUndervisningsgrupper < 5 || config.numberOfTeachers < 5 || config.numberOfStudents < 5) {
@@ -255,8 +255,8 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
   logger.warn("This poor bastard should be working at every school: {FeideName}", skoleressursPool[0].feidenavn?.identifikatorverdi)
 
   const schools: FintSchoolWithStudents[] = []
-  config.schoolNames.forEach((schoolName, schoolIndex) => {
-    const schoolToAdd: FintSchoolWithStudents = generateSchool(schoolName)
+  config.schools.forEach((school: MockFintSchool, schoolIndex: number) => {
+    const schoolToAdd: FintSchoolWithStudents = generateSchool(school)
 
     const undervisningsforholdPool: FintUndervisningsforhold[] = []
     for (let i = 0; i < config.numberOfTeachers; i++) {
@@ -317,11 +317,11 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
         return prevSchoolElevforhold.some((ef) => ef?.elev.systemId.identifikatorverdi === elev.systemId.identifikatorverdi)
       })
       if (!alsoStudentAtPreviousSchool) {
-        logger.info("Could not find cross-school-student. Adding cross-school student from {PreviousSchoolName} to {SchoolName}", prevSchool.skole?.navn, schoolName)
+        logger.info("Could not find cross-school-student. Adding cross-school student from {PreviousSchoolName} to {SchoolName}", prevSchool.skole?.navn, school.name)
         // If not, add one to ensure at least one student is also at a previous school
         skoleelever.push(norwegianFaker.helpers.arrayElement(prevSchoolElevforhold.filter((ef) => ef !== null)).elev)
       } else {
-        logger.info("Found cross-school-student for {SchoolName}", schoolName)
+        logger.info("Found cross-school-student for {SchoolName}", school.name)
       }
     }
 

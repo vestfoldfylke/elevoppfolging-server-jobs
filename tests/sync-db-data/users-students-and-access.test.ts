@@ -1,6 +1,7 @@
 import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
+import { en, Faker, nb_NO } from "@faker-js/faker"
 import { ObjectId } from "mongodb"
 import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
@@ -200,6 +201,9 @@ describe("repackPeriode", () => {
 })
 
 describe("sync-db-data/users-students-and-access", () => {
+  const faker = new Faker({
+    locale: [en, nb_NO]
+  })
   const mockConfig: GenerateMockFintSchoolsWithStudentsOptions = {
     minimumNumberOfStudentsWithBlockedAddress,
     numberOfKlasser: 5,
@@ -207,7 +211,16 @@ describe("sync-db-data/users-students-and-access", () => {
     numberOfUndervisningsgrupper: 5,
     numberOfTeachers: 5,
     numberOfStudents: 10,
-    schoolNames: ["School 1", "School 2"]
+    schools: [
+      {
+        name: "School 1",
+        schoolNumber: faker.string.numeric(8)
+      },
+      {
+        name: "School 2",
+        schoolNumber: faker.string.numeric(8)
+      }
+    ]
   }
   const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents(mockConfig)
 
