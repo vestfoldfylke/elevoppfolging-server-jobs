@@ -30,6 +30,10 @@ requires following values in `./local.settings.json`
     "APP_NAME": "Elevoppfølging",
     "MONGODB_CONNECTION_STRING": "<connection-string>",
     "MONGODB_DB_NAME": "<db-name>",
+    "FRONTEND_APP_CLIENT_ID": "",
+    "AZURE_TENANT_ID": "<tenant-id>",
+    "AZURE_CLIENT_ID": "<client-id>", // Client (service principal) must have key-vault-administrator role on the key-vault
+    "AZURE_CLIENT_SECRET": "<client-secret>",
     // needs Utdanning permissions in FINT
     "FINT_USERNAME": "fint-username",
     "FINT_PASSWORD": "fint-password",

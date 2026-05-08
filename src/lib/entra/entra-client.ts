@@ -1,7 +1,7 @@
 import { DefaultAzureCredential } from "@azure/identity"
 import type { AppRoleAssignment, PublicError, User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
-import { FRONTEND_APP_REGISTRATION_ID } from "../../config.js"
+import { FRONTEND_APP_CLIENT_ID } from "../../config.js"
 import type { IEntraClient } from "../../types/entra/entra-client.js"
 
 export class EntraClient implements IEntraClient {
@@ -77,11 +77,11 @@ export class EntraClient implements IEntraClient {
   }
 
   async getEnterpriseApplicationUsers(): Promise<User[]> {
-    if (!FRONTEND_APP_REGISTRATION_ID) {
-      logger.error("FRONTEND_APP_REGISTRATION_ID is not set, cannot fetch enterprise application users")
-      throw new Error("FRONTEND_APP_REGISTRATION_ID is not set, cannot fetch enterprise application users")
+    if (!FRONTEND_APP_CLIENT_ID) {
+      logger.error("FRONTEND_APP_CLIENT_ID is not set, cannot fetch enterprise application users")
+      throw new Error("FRONTEND_APP_CLIENT_ID is not set, cannot fetch enterprise application users")
     }
-    const appRoleAssignments: AppRoleAssignment[] = await this.getEnterpriseAppAssignments(FRONTEND_APP_REGISTRATION_ID)
+    const appRoleAssignments: AppRoleAssignment[] = await this.getEnterpriseAppAssignments(FRONTEND_APP_CLIENT_ID)
 
     const groupAssignments = appRoleAssignments.filter((assignment) => assignment.principalType === "Group")
 
