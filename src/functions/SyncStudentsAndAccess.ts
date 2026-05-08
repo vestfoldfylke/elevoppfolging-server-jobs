@@ -16,9 +16,24 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   const entraClient: IEntraClient = getEntraClient()
   const dbClient: IDbClient = getDbClient()
 
-  logger.info("Fetching schools with students from FINT...")
   const schoolsWithStudents: FintSchoolWithStudents[] = []
-  const schools: FintSkoleInfo[] = await fintClient.getSchools()
+
+  logger.info("Fetching schools with students from FINT...")
+  let schools: FintSkoleInfo[]
+  try {
+    schools = await fintClient.getSchools()
+  } catch (error) {
+    logger.errorException(error, "Failed to fetch schools from FINT")
+
+    const err: Error = error as Error
+    return {
+      status: 500,
+      jsonBody: {
+        message: err.message,
+        stack: err.stack
+      }
+    }
+  }
   logger.info("Fetched {SchoolCount} schools from FINT. Now fetching students for each school...", schools.length)
 
   for (const skole of schools) {
@@ -28,14 +43,18 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
     }
 
     logger.info("Fetching students for school {SchoolName} ({SchoolNumber})...", skole.navn, skole.skolenummer.identifikatorverdi)
-    const schoolWithStudents: FintSchoolWithStudents = await fintClient.getSchoolWithStudents(skole.skolenummer.identifikatorverdi)
-    schoolsWithStudents.push(schoolWithStudents)
-    logger.info(
-      "Fetched {ElevforholdCount} elevforhold for school {SchoolName} ({SchoolNumber})",
-      schoolWithStudents.skole?.elevforhold?.length ?? null,
-      skole.navn,
-      skole.skolenummer.identifikatorverdi
-    )
+    try {
+      const schoolWithStudents: FintSchoolWithStudents = await fintClient.getSchoolWithStudents(skole.skolenummer.identifikatorverdi)
+      schoolsWithStudents.push(schoolWithStudents)
+      logger.info(
+        "Fetched {ElevforholdCount} elevforhold for school {SchoolName} ({SchoolNumber})",
+        schoolWithStudents.skole?.elevforhold?.length ?? null,
+        skole.navn,
+        skole.skolenummer.identifikatorverdi
+      )
+    } catch (error) {
+      logger.errorException(error, "Failed to fetch students for school {SchoolName} ({SchoolNumber}), skipping...", skole.navn, skole.skolenummer.identifikatorverdi)
+    }
   }
   logger.info("Fetched students for all {SchoolCount} schools", schoolsWithStudents.length)
 
