@@ -14,6 +14,10 @@ type FintPayload = {
   variables?: FintQueryVariables
 }
 
+type WithError<T> = T & {
+  errors?: Array<unknown>
+}
+
 export class FintClient implements IFintClient {
   private readonly schoolWithStudentsQuery: string
 
@@ -116,11 +120,11 @@ export class FintClient implements IFintClient {
       throw new Error(`Failed to call FINT ${authOptions.VERSION} graphql endpoint. Status: ${response.status}. StatusText: ${response.statusText}`)
     }
 
-    const graphqlResponse: T = await response.json()
+    const graphqlResponse: WithError<T> = await response.json()
 
-    if ("errors" in (graphqlResponse as object)) {
-      logger.error("Errors occured when calling FINT {FintVersion} graphql endpoint", authOptions.VERSION)
-      throw new Error(`Errors occured when calling FINT ${authOptions.VERSION} graphql endpoint`)
+    if (graphqlResponse.errors) {
+      logger.error("{ErrorCount} errors occured when calling FINT {FintVersion} graphql endpoint", graphqlResponse.errors.length, authOptions.VERSION)
+      throw new Error(`${graphqlResponse.errors.length} errors occured when calling FINT ${authOptions.VERSION} graphql endpoint`)
     }
 
     logger.info("Successfully called FINT {FintVersion} graphql endpoint", authOptions.VERSION)
