@@ -1,15 +1,18 @@
 import { app, type HttpResponseInit } from "@azure/functions"
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
+import { FINT_ADDRESS_BLOCK } from "../config.js"
 import { getDbClient } from "../lib/db/get-db-client.js"
 import { getEntraClient } from "../lib/entra/get-entra-client.js"
 import { getFintClient } from "../lib/fint/get-fint-client.js"
-/*import { updateUsersStudentsAndAccess } from "../lib/sync-db-data/users-students-and-access.js"*/
+import { getUniqueStudents } from "../lib/fint/utils.js"
+import { updateUsersStudentsAndAccess } from "../lib/sync-db-data/users-students-and-access.js"
 import type { IDbClient } from "../types/db/db-client.js"
+import { DbAppStudent, NewAppStudent } from "../types/db/shared-types.js"
 import type { IEntraClient } from "../types/entra/entra-client.js"
 import type { IFintClient } from "../types/fint/fint-client.js"
 import type { FintSkoleInfo } from "../types/fint/fint-school.js"
-import type { FintSchoolWithStudents } from "../types/fint/fint-school-with-students.js"
+import type { FintElev, FintSchoolWithStudents } from "../types/fint/fint-school-with-students.js"
 
 export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   const fintClient: IFintClient = getFintClient()
@@ -78,11 +81,14 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
   const dbSchools = await dbClient.getSchools()
   logger.info("Fetched {DbSchoolCount} schools records from database", dbSchools.length)
 
-  return { body: "Skipping 'Syncing users and students' to test " }
+  const numberOfStudentsWithAddressBlockInFint: number = getUniqueStudents(schoolsWithStudents, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
+  logger.warn("There are currently {StudentsWithAddressBlockInFintCount} students with address block fetched from FINT", numberOfStudentsWithAddressBlockInFint)
 
-  /*logger.info("Syncing users and students...")
+  logger.info("Syncing users and students...")
 
   const updatedData = updateUsersStudentsAndAccess(dbUsers, dbStudents, dbAccess, dbSchools, schoolsWithStudents, appUsers)
+  const numberOfStudentsWithAddressBlockInDb: number = updatedData.updatedStudents.filter((student: NewAppStudent | DbAppStudent) => student.hasBlockedAddress).length
+  logger.warn("There are currently {StudentsWithAddressBlockInDbCount} students with address block in the DB", numberOfStudentsWithAddressBlockInDb)
 
   logger.info("Updating database with new users, students and access records...")
 
@@ -100,7 +106,7 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
 
   logger.info("Sync completed successfully")
 
-  return { body: `Hello balle!` }*/
+  return { body: `Hello balle!` }
 }
 
 app.http("SyncStudentsAndAccess", {

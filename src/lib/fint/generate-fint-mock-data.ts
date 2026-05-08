@@ -13,6 +13,7 @@ import type {
   FintUndervisningsforhold,
   FintUndervisningsgruppe
 } from "../../types/fint/fint-school-with-students.js"
+import { getUniqueStudents } from "./utils.js"
 
 export const norwegianFaker = new Faker({
   locale: [nb_NO, en]
@@ -222,24 +223,6 @@ const generateSchool = (name: string): FintSchoolWithStudents => {
       elevforhold: []
     }
   }
-}
-
-export const getUniqueStudents = (schools: FintSchoolWithStudents[], studentFunction: (student: FintElev) => boolean | undefined): FintElev[] => {
-  const uniqueStudents = new Map<string, FintElev>()
-
-  schools.forEach((school: FintSchoolWithStudents) => {
-    if (!Array.isArray(school.skole?.elevforhold)) {
-      return
-    }
-
-    school.skole.elevforhold.forEach((elevforhold: FintElevforhold | null) => {
-      if (elevforhold?.elev && studentFunction(elevforhold.elev)) {
-        uniqueStudents.set(elevforhold.elev.systemId.identifikatorverdi, elevforhold.elev)
-      }
-    })
-  })
-
-  return Array.from(uniqueStudents.values())
 }
 
 export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintSchoolsWithStudentsOptions): FintSchoolWithStudents[] => {
