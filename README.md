@@ -42,7 +42,7 @@ requires following values in `./local.settings.json`
     "FINT_SCOPE": "fint-client",
     "FINT_TOKEN_URL": "https://idp.felleskomponent.no/nidp/oauth/nam/token",
     "FINT_API_URL": "https://api.felleskomponent.no", // use https://beta.felleskomponent.no for test environment
-    "FINT_VERSION": "4", // only used for logging. Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set
+    "FINT_VERSION": "4", // Set to "3" for FINT v3, and "4" for FINT v4. Defaults to "4" if not set. If set to "3", v3 data will be fetched and converted to V4 format.
     "FINT_ADDRESS_BLOCK": "SPERRET ADRESSE" // address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
   },
   "ConnectionStrings": {}

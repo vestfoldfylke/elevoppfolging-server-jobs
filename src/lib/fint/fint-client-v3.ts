@@ -3,7 +3,8 @@ import { logger } from "@vestfoldfylke/loglady"
 import { getFintConfig, MOCK_FINT } from "../../config.js"
 import type { FintAccessTokenResponse, FintConfig, FintGraphQlResponse, IFintClient } from "../../types/fint/fint-client.js"
 import type { FintSkoleInfo, FintSkolerRest } from "../../types/fint/fint-school.js"
-import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
+import type { FintElevforhold, FintKlassemedlemskap, FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
+import type { FintBasisgruppemedlemskap, FintElevforholdV3, FintSchoolWithStudentsV3 } from "../../types/fint/fint-school-with-students-v3.js"
 
 const authOptions: FintConfig | null = !MOCK_FINT ? getFintConfig() : null
 
@@ -14,11 +15,11 @@ type FintPayload = {
   variables?: FintQueryVariables
 }
 
-export class FintClient implements IFintClient {
+export class FintClientV3 implements IFintClient {
   private readonly schoolWithStudentsQuery: string
 
   constructor() {
-    this.schoolWithStudentsQuery = readFileSync("./src/lib/fint/queries/school-with-students.graphql", "utf8")
+    this.schoolWithStudentsQuery = readFileSync("./src/lib/fint/queries/school-with-students-v3.graphql", "utf8")
     logger.info("Initialized FINT client for FINT version {FintVersion}", process.env.FINT_VERSION)
   }
 
@@ -41,7 +42,7 @@ export class FintClient implements IFintClient {
   }
 
   async getSchoolWithStudents(schoolNumber: string): Promise<FintSchoolWithStudents> {
-    return await this.callFintGraphql<FintSchoolWithStudents>(this.schoolWithStudentsQuery, { schoolNumber })
+    return this.convertFromV3ToV4(await this.callFintGraphql<FintSchoolWithStudentsV3>(this.schoolWithStudentsQuery, { schoolNumber }))
   }
 
   private async getAccessToken(): Promise<string> {
@@ -160,5 +161,51 @@ export class FintClient implements IFintClient {
     logger.info("Successfully called FINT {FintVersion} REST endpoint", authOptions.VERSION)
 
     return restResponse
+  }
+
+  private convertFromV3ToV4(schoolWithStudents: FintSchoolWithStudentsV3): FintSchoolWithStudents {
+    logger.info("Converting school with students data from FINT V3 format to V4 format for school {SchoolName} ({SchoolNumber}) with {ElevforholdCount} elevforhold", schoolWithStudents.skole?.navn, schoolWithStudents.skole?.skolenummer.identifikatorverdi, schoolWithStudents.skole?.elevforhold?.length ?? null)
+    return {
+      skole: !schoolWithStudents.skole
+        ? null
+        : {
+            navn: schoolWithStudents.skole.navn,
+            skolenummer: schoolWithStudents.skole.skolenummer,
+            elevforhold: !schoolWithStudents.skole.elevforhold
+              ? null
+              : schoolWithStudents.skole.elevforhold.map((elevforhold: FintElevforholdV3 | null): FintElevforhold | null => {
+                  if (!elevforhold) {
+                    return null
+                  }
+
+                  return {
+                    hovedskole: elevforhold.hovedskole,
+                    systemId: elevforhold.systemId,
+                    gyldighetsperiode: elevforhold.gyldighetsperiode,
+                    elev: elevforhold.elev,
+                    klassemedlemskap: !elevforhold.basisgruppemedlemskap
+                      ? null
+                      : elevforhold.basisgruppemedlemskap.map((basisgruppemedlemskap: FintBasisgruppemedlemskap | null): FintKlassemedlemskap | null => {
+                          if (!basisgruppemedlemskap) {
+                            return null
+                          }
+
+                          return {
+                            systemId: basisgruppemedlemskap.systemId,
+                            gyldighetsperiode: basisgruppemedlemskap.gyldighetsperiode,
+                            klasse: {
+                              navn: basisgruppemedlemskap.basisgruppe.navn,
+                              systemId: basisgruppemedlemskap.basisgruppe.systemId,
+                              trinn: basisgruppemedlemskap.basisgruppe.trinn,
+                              undervisningsforhold: basisgruppemedlemskap.basisgruppe.undervisningsforhold
+                            }
+                          }
+                        }),
+                    undervisningsgruppemedlemskap: elevforhold.undervisningsgruppemedlemskap,
+                    kontaktlarergruppemedlemskap: elevforhold.kontaktlarergruppemedlemskap
+                  }
+                })
+          }
+    }
   }
 }

@@ -1,6 +1,10 @@
 import type { FintConfig } from "./types/fint/fint-client.js"
 
+const getFintVersion = (): string => `V${process.env.FINT_VERSION || "4"}`
+
 export const MOCK_FINT = process.env.MOCK_FINT === "true"
+
+export const FINT_VERSION: string = getFintVersion()
 
 if (MOCK_FINT && !process.env.MOCK_FINT_DATA_PATH?.endsWith(".json")) {
   throw new Error("MOCK_FINT is set to true, but MOCK_FINT_DATA_PATH is not set to a valid .json file path")
@@ -63,7 +67,7 @@ export const getFintConfig = (): FintConfig => {
     SCOPE: process.env.FINT_SCOPE || "fint-client",
     TOKEN_URL: process.env.FINT_TOKEN_URL || "https://idp.felleskomponent.no/nidp/oauth/nam/token",
     API_URL: process.env.FINT_API_URL || "https://api.felleskomponent.no",
-    VERSION: `V${process.env.FINT_VERSION || "4"}`
+    VERSION: getFintVersion()
   }
 }
 
