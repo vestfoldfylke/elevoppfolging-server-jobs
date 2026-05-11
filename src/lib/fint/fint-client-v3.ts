@@ -164,7 +164,12 @@ export class FintClientV3 implements IFintClient {
   }
 
   private convertFromV3ToV4(schoolWithStudents: FintSchoolWithStudentsV3): FintSchoolWithStudents {
-    logger.info("Converting school with students data from FINT V3 format to V4 format for school {SchoolName} ({SchoolNumber}) with {ElevforholdCount} elevforhold", schoolWithStudents.skole?.navn, schoolWithStudents.skole?.skolenummer.identifikatorverdi, schoolWithStudents.skole?.elevforhold?.length ?? null)
+    logger.info(
+      "Converting school with students data from FINT V3 format to V4 format for school {SchoolName} ({SchoolNumber}) with {ElevforholdCount} elevforhold",
+      schoolWithStudents.skole?.navn,
+      schoolWithStudents.skole?.skolenummer.identifikatorverdi,
+      schoolWithStudents.skole?.elevforhold?.length ?? null
+    )
     return {
       skole: !schoolWithStudents.skole
         ? null
