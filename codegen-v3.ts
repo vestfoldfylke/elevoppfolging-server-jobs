@@ -7,17 +7,17 @@ if (!process.env.FINT_GENERATE_TYPES_MANUAL_KEY) {
 const config: CodegenConfig = {
   schema: [
     {
-      "https://beta.felleskomponent.no/graphql/graphql": {
+      "https://api.felleskomponent.no/graphql/graphql": {
         headers: {
           Authorization: `Bearer ${process.env.FINT_GENERATE_TYPES_MANUAL_KEY}`
         }
       }
     }
   ],
-  documents: ["./src/lib/fint/queries/**/*.graphql", "!./src/lib/fint/queries/**/*-v3.graphql"],
+  documents: ["./src/lib/fint/queries/**/*-v3.graphql"],
 
   generates: {
-    "./src/types/fint/fint-school-with-students.ts": {
+    "./src/types/fint/fint-school-with-students-v3.ts": {
       plugins: ["typescript", "typescript-operations"],
       config: {
         scalars: {

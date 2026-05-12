@@ -6,14 +6,18 @@ import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-s
 
 export class MockFintClient implements IFintClient {
   private mockSchools: FintSchoolWithStudents[]
+
   constructor() {
     if (!MOCK_FINT_DATA_PATH) {
       throw new Error("MOCK_FINT_DATA_PATH is not set, cannot initialize MockFintClient")
     }
+
     if (!existsSync(MOCK_FINT_DATA_PATH)) {
       throw new Error(`Mock schools file not found at ${MOCK_FINT_DATA_PATH} - please run 'npm run generate-fint-mock-data' to create it`)
     }
+
     const fileContent = readFileSync(MOCK_FINT_DATA_PATH, "utf-8")
+
     try {
       this.mockSchools = JSON.parse(fileContent) as FintSchoolWithStudents[]
     } catch (error) {
@@ -32,11 +36,13 @@ export class MockFintClient implements IFintClient {
       }
     })
   }
+
   async getSchoolWithStudents(schoolNumber: string): Promise<FintSchoolWithStudents> {
     const mockSchool = this.mockSchools.find((s) => s.skole?.skolenummer.identifikatorverdi === schoolNumber)
     if (!mockSchool) {
       throw new Error(`Mock school with school number ${schoolNumber} not found`)
     }
+
     return mockSchool
   }
 }

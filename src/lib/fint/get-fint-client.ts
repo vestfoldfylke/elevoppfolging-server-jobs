@@ -1,9 +1,10 @@
-import { MOCK_FINT } from "../../config.js"
+import { FINT_VERSION, MOCK_FINT } from "../../config.js"
 import type { IFintClient } from "../../types/fint/fint-client.js"
 import { FintClient } from "./fint-client.js"
+import { FintClientV3 } from "./fint-client-v3.js"
 import { MockFintClient } from "./mock-fint-client.js"
 
-const fintClient: IFintClient = MOCK_FINT ? new MockFintClient() : new FintClient()
+const fintClient: IFintClient = MOCK_FINT ? new MockFintClient() : FINT_VERSION === "V3" ? new FintClientV3() : new FintClient()
 
 export const getFintClient = (): IFintClient => fintClient
 
