@@ -22,6 +22,7 @@ const mockDb: MockDb = {
 
 export class MockDbClient implements IDbClient {
   private readonly debugFolderPath = "./debug-db"
+
   constructor() {
     if (!existsSync(this.debugFolderPath)) {
       mkdirSync(this.debugFolderPath)
@@ -37,12 +38,15 @@ export class MockDbClient implements IDbClient {
       if ("_id" in student) {
         return student
       }
+
       return {
         ...student,
         _id: new ObjectId()
       }
     })
+
     mockDb.students = withIds
+
     writeFileSync(`${this.debugFolderPath}/mock-students.json`, JSON.stringify(withIds, null, 2))
   }
 
@@ -55,12 +59,15 @@ export class MockDbClient implements IDbClient {
       if ("_id" in user) {
         return user
       }
+
       return {
         ...user,
         _id: new ObjectId()
       }
     })
+
     mockDb.users = withIds
+
     writeFileSync(`${this.debugFolderPath}/mock-users.json`, JSON.stringify(withIds, null, 2))
   }
 
@@ -73,12 +80,15 @@ export class MockDbClient implements IDbClient {
       if ("_id" in access) {
         return access
       }
+
       return {
         ...access,
         _id: new ObjectId()
       }
     })
+
     mockDb.access = withIds
+
     writeFileSync(`${this.debugFolderPath}/mock-access.json`, JSON.stringify(withIds, null, 2))
   }
 
@@ -91,12 +101,15 @@ export class MockDbClient implements IDbClient {
       if ("_id" in school) {
         return school
       }
+
       return {
         ...school,
         _id: new ObjectId()
       }
     })
+
     mockDb.schools = withIds
+
     writeFileSync(`${this.debugFolderPath}/mock-schools.json`, JSON.stringify(withIds, null, 2))
   }
 }

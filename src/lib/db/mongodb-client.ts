@@ -12,6 +12,7 @@ export class MongoDbClient implements IDbClient {
     if (!MONGODB.CONNECTION_STRING) {
       throw new Error("MONGODB_CONNECTION_STRING is not set (du har glemt den)")
     }
+
     this.mongoClient = new MongoClient(MONGODB.CONNECTION_STRING)
   }
 
@@ -19,6 +20,7 @@ export class MongoDbClient implements IDbClient {
     if (this.db) {
       return this.db
     }
+
     try {
       await this.mongoClient.connect()
       this.db = this.mongoClient.db(MONGODB.DB_NAME)
@@ -32,6 +34,7 @@ export class MongoDbClient implements IDbClient {
   private async replaceCollection<T extends Document>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
     const db = await this.getDb()
     const collections = await db.listCollections().toArray()
+
     const previousCollectionName = `${collectionName}_previous`
     const newCollectionName = `${collectionName}_new`
     const hasCurrent = collections.some((col) => col.name === collectionName)
