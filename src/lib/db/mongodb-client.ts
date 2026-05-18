@@ -1,8 +1,8 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { type Db, type Document, MongoClient, type OptionalUnlessRequiredId } from "mongodb"
+import { type Db, type Document, MongoClient, ObjectId, type OptionalUnlessRequiredId, type WithId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbEmailAlert, DbSchool, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
   private readonly mongoClient: MongoClient
@@ -130,6 +130,46 @@ export class MongoDbClient implements IDbClient {
 
   async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
     await this.replaceCollection<DbSchool | NewSchool>(MONGODB.COLLECTIONS.SCHOOLS, schools)
+  }
+
+  async getEmailAlertsToHandle(): Promise<DbEmailAlert[]> {
+    try {
+      const db: Db = await this.getDb()
+
+      return await db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).find({ status: "QUEUED" }).toArray()
+    } catch (error) {
+      logger.errorException(error, "Error fetching email alerts to handle")
+      return []
+    }
+  }
+
+  async updateEmailAlert(updatedAlert: DbEmailAlert): Promise<void> {
+    try {
+      const db: Db = await this.getDb()
+
+      await db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).updateOne({ _id: updatedAlert._id }, { $set: { ...updatedAlert } })
+      logger.info("Updated EmailAlert with Id {EmailAlertId}", updatedAlert._id.toString())
+    } catch (error) {
+      logger.errorException(error, "Error updating email alert with Id {EmailAlertId}. UpdatedAlert: {@UpdatedAlert}", updatedAlert._id.toString(), updatedAlert)
+      throw error
+    }
+  }
+
+  async getStudentNameById(studentId: string): Promise<string | null> {
+    try {
+      const db: Db = await this.getDb()
+
+      const student: WithId<DbAppStudent> | null = await db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).findOne({ _id: new ObjectId(studentId) })
+      if (!student) {
+        logger.error("Student with Id {StudentId} not found", studentId)
+        return null
+      }
+
+      return student.name
+    } catch (error) {
+      logger.errorException(error, "Error fetching student with Id {StudentId}", studentId)
+      throw error
+    }
   }
 }
 
