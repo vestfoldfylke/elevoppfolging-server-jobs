@@ -1,4 +1,5 @@
 import type { FintConfig } from "./types/fint/fint-client.js"
+import type { SmtpConfig } from "./types/smtp/smtp-client.js"
 
 const getFintVersion = (): string => `V${process.env.FINT_VERSION || "4"}`
 
@@ -18,6 +19,8 @@ export const MOCK_DB = process.env.MOCK_DB === "true"
 
 export const MOCK_ENTRA = process.env.MOCK_ENTRA === "true"
 
+export const MOCK_SMTP = process.env.MOCK_SMTP === "true"
+
 export const FEIDENAME_SUFFIX = process.env.FEIDENAME_SUFFIX || "fylke.no"
 
 export const MONGODB = {
@@ -28,7 +31,8 @@ export const MONGODB = {
     USERS: "users",
     ACCESS: "access",
     DOCUMENTS: "documents",
-    SCHOOLS: "schools"
+    SCHOOLS: "schools",
+    EMAIL_ALERTS: "email-alerts"
   }
 }
 
@@ -72,3 +76,26 @@ export const getFintConfig = (): FintConfig => {
 }
 
 export const FINT_ADDRESS_BLOCK: string = process.env.FINT_ADDRESS_BLOCK || "SPERRET ADRESSE"
+
+export const getSmtpConfig = (): SmtpConfig => {
+  const baseUrl: string | undefined = process.env.SMTP_BASE_URL
+  if (!baseUrl) {
+    throw new Error("SMTP_BASE_URL must be set to a valid SMTP API base URL")
+  }
+
+  const apiKey: string | undefined = process.env.SMTP_API_KEY
+  if (!apiKey) {
+    throw new Error("SMTP_API_KEY must be set to a valid API key")
+  }
+
+  const fromAddress: string | undefined = process.env.SMTP_FROM_ADDRESS
+  if (!fromAddress) {
+    throw new Error("SMTP_FROM_ADDRESS must be set to a valid email address")
+  }
+
+  return {
+    baseUrl,
+    apiKey,
+    fromAddress
+  }
+}

@@ -48,6 +48,7 @@ export class MongoDbEncryptionClient {
     if (this.db) {
       return this.db
     }
+
     try {
       await this.mongoClient.connect()
       this.db = this.mongoClient.db(this.dbName)
@@ -90,17 +91,17 @@ export class MongoDbEncryptionClient {
 
   async createEncryptionKey(keyAltNames: string[]): Promise<UUID> {
     const db = await this.getDb()
-    const keyvaultCollection = db.collection(this.keyVaultCollectionName)
+    const keyVaultCollection = db.collection(this.keyVaultCollectionName)
 
     // Ensure index on keyAltNames
-    await keyvaultCollection.createIndex({ keyAltNames: 1 }, { unique: true, partialFilterExpression: { keyAltNames: { $exists: true } } })
+    await keyVaultCollection.createIndex({ keyAltNames: 1 }, { unique: true, partialFilterExpression: { keyAltNames: { $exists: true } } })
 
     const encryptionClient = await this.getEncryptionClient()
-    const encryptionKeyId = await encryptionClient.createDataKey("azure", {
+
+    return await encryptionClient.createDataKey("azure", {
       masterKey: this.masterKey,
       keyAltNames
     })
-    return encryptionKeyId
   }
 
   async getEncryptionKeys(): Promise<DataKey[]> {
@@ -119,9 +120,12 @@ export class MongoDbEncryptionClient {
     )
 
     if (result.bulkWriteResult != null) {
-      console.log(`Keys were re-wrapped. Details: ${JSON.stringify(result.bulkWriteResult)}`)
+      logger.info("Keys were re-wrapped")
+      console.log(`Details: ${JSON.stringify(result.bulkWriteResult)}`)
+
       return
     }
-    console.log("No keys matched the filter, no bulk write performed.")
+
+    logger.info("No keys matched the filter, no bulk write performed.")
   }
 }

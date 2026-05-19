@@ -2,7 +2,7 @@ import type { Binary, ObjectId } from "mongodb"
 
 /** Undervisningsforhold & Skoleressurs */
 export type Teacher = {
-  /** entra objectid knyttet til en bruker i Users-collection hvis læreren finnes der */
+  /** entra ObjectId knyttet til en bruker i Users-collection hvis læreren finnes der */
   entraUserId: string | null
   systemId: string
   feideName: string
@@ -105,7 +105,7 @@ export type MainSchool = SchoolInfo & {
 
 export type Source = "AUTO" | "MANUAL"
 
-/** En elev i db for denne appen */
+/** En elev i db for denne app */
 export type NewAppStudent = {
   /** FINT system-id for eleven */
   systemId: string
@@ -135,6 +135,7 @@ export type UpdateAppStudent = AppStudent
 export type NewManualStudentInput = {
   ssn: string
   name: string
+  hasBlockedAddress: boolean
   school: School
 }
 
@@ -322,10 +323,6 @@ export type DocumentParagraphItem = {
 export type DocumentInfoItem = {
   type: "info"
   value: string
-  link: {
-    url: string
-    text: string
-  }
 }
 
 export type DocumentTextInputItem = {
@@ -713,12 +710,24 @@ export type DbStudentDataSharingConsent = StudentDataSharingConsentBase &
 
 // EMAIL ALERTS
 
+export type EmailAlertStatus = "QUEUED" | "SENT" | "FAILED"
+
+export type EmailAlertReceiver = {
+  receiver: string
+  messageId?: string
+  status: EmailAlertStatus
+}
+
 export type NewDbEmailAlert = {
   type: "DOCUMENT_CREATED" | "DOCUMENT_MESSAGE_CREATED"
   documentId: ObjectId
-  receivers: string[]
-  status: "QUEUED" | "SENT" | "FAILED"
+  receivers: EmailAlertReceiver[]
+  status: EmailAlertStatus
   created: EditorData
+  alertBody: {
+    body: string
+    subject: string
+  }
 }
 
 export type DbEmailAlert = NewDbEmailAlert & {
@@ -743,7 +752,7 @@ export type MetricCount = {
   splitMetricByLabels?: boolean
   /** Only applicable when <u>splitMetricByLabels</u> is <b>true</b>.<br />
    *  If set to false, labels will not be added to the metric (<b>metricResultName</b> will be added anyway).<br />
-   *  If not set or set to true, splitted labels will be added to the metric (<b>metricResultName</b> will be added anyway).<br />
+   *  If not set or set to true, split labels will be added to the metric (<b>metricResultName</b> will be added anyway).<br />
    *  Default behavior: true */
   includeLabelsInSplit?: boolean
 }
@@ -753,4 +762,58 @@ export type MetricGauge = {
   description: string
   value: number
   labels?: MetricLabel[]
+}
+
+export type AuditEntryInput = {
+  created: EditorData
+  action: "OPEN" | "CREATE" | "UPDATE" | "DELETE"
+  metaData?: {
+    /** Can be a single string or a stringified JSON */
+    data?: string
+    parentResource: "Student" | "StudentDocument" | "StudentDocumentMessage" | "Group" | "GroupDocument" | "School" | "SYSTEM"
+    parentResourceId?: string
+    schoolId?: string
+  }
+  resource:
+    | "Student"
+    | "StudentDocument"
+    | "StudentDocumentMessage"
+    | "ImportantStuff"
+    | "StudentDataSharingConsent"
+    | "GroupDocument"
+    | "GroupDocumentMessage"
+    | "EmailAlert"
+    | "Access"
+    | "ProgramArea"
+    | "ManualUser"
+    | "StudentCheckBox"
+    | "Template"
+    | "School"
+  resourceId: string
+  resourceName: string
+}
+
+export type AuditEntry = AuditEntryInput & {
+  _id: string
+}
+
+export type ConstantDisplayNameEntry = {
+  plural: string
+  single?: string
+}
+
+export type AuditSearchTerms = {
+  timeFrame: {
+    from: string
+    to: string
+  }
+  user: string
+  action: "" | AuditEntry["action"]
+  resource: "" | AuditEntry["resource"]
+  resourceIdentifier: string
+}
+
+export type AuditSearchQueryResult = {
+  errorMessage?: string
+  entries: AuditEntry[]
 }
