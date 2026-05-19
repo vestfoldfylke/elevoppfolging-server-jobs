@@ -92,6 +92,18 @@ export class MongoDbClient implements IDbClient {
       )
     }
 
+    if (items.length === 0) {
+      try {
+        logger.info("{itemCount} items to insert into {CollectionName}. Removing any possible current items...", items.length, collectionName)
+        await db.collection(collectionName).deleteMany({})
+
+        return
+      } catch (error) {
+        logger.errorException(error, `Error renaming collection ${newCollectionName} to ${collectionName}`)
+        throw error
+      }
+    }
+
     try {
       logger.info("Renaming collection {NewCollectionName} to {CollectionName}", newCollectionName, collectionName)
       await db.collection(newCollectionName).rename(collectionName)
