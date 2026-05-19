@@ -57,12 +57,18 @@ export class MongoDbClient implements IDbClient {
       }
     }
 
-    // Now, insert into new collection
+    // Now, insert into collection
     try {
       const collection = db.collection<T>(newCollectionName)
+      
       await collection.deleteMany({})
-      await collection.insertMany(items)
-      logger.info("Replaced collection {collectionName} with {itemCount} items", newCollectionName, items.length)
+      if (items.length > 0) {
+        logger.info("Inserting {itemCount} items into collection {collectionName}", items.length, newCollectionName)
+        await collection.insertMany(items)
+        logger.info("Replaced collection {collectionName} with {itemCount} items", newCollectionName, items.length)
+      } else {
+        logger.warn("{itemCount} items to insert into collection {collectionName}", items.length, newCollectionName)
+      }
     } catch (error) {
       logger.errorException(error, "Error replacing collection {collectionName}", newCollectionName)
       throw error
