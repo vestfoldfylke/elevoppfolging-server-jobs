@@ -60,7 +60,7 @@ export class MongoDbClient implements IDbClient {
     // Now, insert into collection
     try {
       const collection = db.collection<T>(newCollectionName)
-      
+
       await collection.deleteMany({})
       if (items.length > 0) {
         logger.info("Inserting {itemCount} items into collection {collectionName}", items.length, newCollectionName)
