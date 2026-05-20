@@ -410,13 +410,9 @@ export const updateUsersStudentsAndAccess = (
         continue
       }
 
-      const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
-      if (hasStudentBlockedAddress) {
-        logger.warn("Døtter inn denne elevkødden: {DisplayName} 🚨 MED SPERRET ADRESSE 🚨", elev.person.navn.fornavn)
-      } else {
-        logger.info("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
-      }
+      logger.info("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
 
+      const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
       const studentEnrollment: StudentEnrollment = {
         systemId: elevforhold.systemId.identifikatorverdi,
         classMemberships: repackClassMemberships(elevforhold.klassemedlemskap, elev),
