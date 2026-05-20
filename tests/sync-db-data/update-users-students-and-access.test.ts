@@ -7,7 +7,7 @@ import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
 import { getUniqueStudents } from "../../src/lib/fint/utils.js"
-import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/users-students-and-access.js"
+import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/update-users-students-and-access.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
 import type {
@@ -200,7 +200,7 @@ describe("repackPeriode", () => {
   })
 })
 
-describe("sync-db-data/users-students-and-access", () => {
+describe("sync-db-data/update-users-students-and-access", () => {
   const faker = new Faker({
     locale: [en, nb_NO]
   })
@@ -544,7 +544,7 @@ describe("sync-db-data/users-students-and-access", () => {
     const mockEntraUsers = await mockEntraClient.getEnterpriseApplicationUsers()
 
     const result = updateUsersStudentsAndAccess(currentUsers, currentStudents, currentAccess, currentSchools, mockSchools, mockEntraUsers)
-    writeFileSync("./tests/sync-db-data/synced-users-students-and-access.json", JSON.stringify(result, null, 2))
+    writeFileSync("./tests/sync-db-data/synced-update-users-students-and-access.json", JSON.stringify(result, null, 2))
 
     await it("should create students without duplicates", () => {
       // find duplicate students
