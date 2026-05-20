@@ -29,3 +29,10 @@ export type FintGraphQlResponse<T> = {
   errors?: Array<unknown>
   data: T
 }
+
+export type FintQueryVariables = Record<string, string | number>
+
+export type FintPayload = {
+  query: string
+  variables?: FintQueryVariables
+}

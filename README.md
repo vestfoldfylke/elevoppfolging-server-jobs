@@ -22,6 +22,8 @@ requires following values in `./local.settings.json`
   "IsEncrypted": false,
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "node",
+    "EmailAlertsSchedule": "0 */1 * * * *", // every 1 minute
+    "SyncDbDataSchedule": "0 0 7 * * *", // at 07:00 every day
     "MOCK_FINT": "true",
     "MOCK_FINT_DATA_PATH": "full-path-to-mock-data.json", // only used if MOCK_FINT is true
     "MOCK_ENTRA": "true",

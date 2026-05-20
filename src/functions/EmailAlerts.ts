@@ -49,6 +49,6 @@ const handleEmailAlert = async (emailAlert: DbEmailAlert): Promise<void> => {
 }
 
 app.timer("EmailAlerts", {
-  schedule: "0 */1 * * * *",
+  schedule: "%EmailAlertsSchedule%",
   handler: EmailAlerts
 })
