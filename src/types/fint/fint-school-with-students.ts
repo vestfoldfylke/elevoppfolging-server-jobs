@@ -1,10 +1,9 @@
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] }
+/** Internal type. DO NOT USE DIRECTLY. */
+export type Incremental<T> = T | { [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never }
 export type Maybe<T> = T | null
 export type InputMaybe<T> = Maybe<T>
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] }
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> }
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> }
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never }
-export type Incremental<T> = T | { [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never }
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string }
@@ -20,14 +19,14 @@ export type FintElev = {
   systemId: {
     identifikatorverdi: string
   }
-  feidenavn?: {
+  feidenavn: {
     identifikatorverdi: string
   } | null
-  elevnummer?: {
+  elevnummer: {
     identifikatorverdi: string
   } | null
   person: {
-    bostedsadresse?: {
+    bostedsadresse: {
       adresselinje: Array<string | null>
     } | null
     fodselsnummer: {
@@ -35,7 +34,7 @@ export type FintElev = {
     }
     navn: {
       fornavn: string
-      mellomnavn?: string | null
+      mellomnavn: string | null
       etternavn: string
     }
   }
@@ -43,20 +42,20 @@ export type FintElev = {
 
 export type FintGyldighetsPeriode = {
   start: string
-  slutt?: string | null
+  slutt: string | null
 }
 
 export type FintSkoleressurs = {
   systemId: {
     identifikatorverdi: string
   }
-  feidenavn?: {
+  feidenavn: {
     identifikatorverdi: string
   } | null
-  person?: {
+  person: {
     navn: {
       fornavn: string
-      mellomnavn?: string | null
+      mellomnavn: string | null
       etternavn: string
     }
   } | null
@@ -76,16 +75,16 @@ export type FintKlasse = {
   }
   trinn: {
     navn: string
-    grepreferanse?: Array<string | null> | null
+    grepreferanse: Array<string | null> | null
   }
-  undervisningsforhold?: Array<FintUndervisningsforhold | null> | null
+  undervisningsforhold: Array<FintUndervisningsforhold | null> | null
 }
 
 export type FintKlassemedlemskap = {
   systemId: {
     identifikatorverdi: string
   }
-  gyldighetsperiode?: FintGyldighetsPeriode | null
+  gyldighetsperiode: FintGyldighetsPeriode | null
   klasse: FintKlasse
 }
 
@@ -94,14 +93,14 @@ export type FintUndervisningsgruppe = {
   systemId: {
     identifikatorverdi: string
   }
-  undervisningsforhold?: Array<FintUndervisningsforhold | null> | null
+  undervisningsforhold: Array<FintUndervisningsforhold | null> | null
 }
 
 export type FintUndervisningsgruppemedlemskap = {
   systemId: {
     identifikatorverdi: string
   }
-  gyldighetsperiode?: FintGyldighetsPeriode | null
+  gyldighetsperiode: FintGyldighetsPeriode | null
   undervisningsgruppe: FintUndervisningsgruppe
 }
 
@@ -110,30 +109,30 @@ export type FintKontaktlarergruppe = {
   systemId: {
     identifikatorverdi: string
   }
-  undervisningsforhold?: Array<FintUndervisningsforhold | null> | null
+  undervisningsforhold: Array<FintUndervisningsforhold | null> | null
 }
 
 export type FintKontaktlarergruppemedlemskap = {
   systemId: {
     identifikatorverdi: string
   }
-  gyldighetsperiode?: FintGyldighetsPeriode | null
+  gyldighetsperiode: FintGyldighetsPeriode | null
   kontaktlarergruppe: FintKontaktlarergruppe
 }
 
 export type FintElevforhold = {
-  hovedskole?: boolean | null
+  hovedskole: boolean | null
   systemId: {
     identifikatorverdi: string
   }
-  gyldighetsperiode?: {
+  gyldighetsperiode: {
     start: string
-    slutt?: string | null
+    slutt: string | null
   } | null
   elev: FintElev
-  klassemedlemskap?: Array<FintKlassemedlemskap | null> | null
-  undervisningsgruppemedlemskap?: Array<FintUndervisningsgruppemedlemskap | null> | null
-  kontaktlarergruppemedlemskap?: Array<FintKontaktlarergruppemedlemskap | null> | null
+  klassemedlemskap: Array<FintKlassemedlemskap | null> | null
+  undervisningsgruppemedlemskap: Array<FintUndervisningsgruppemedlemskap | null> | null
+  kontaktlarergruppemedlemskap: Array<FintKontaktlarergruppemedlemskap | null> | null
 }
 
 export type FintSkole = {
@@ -141,13 +140,13 @@ export type FintSkole = {
   skolenummer: {
     identifikatorverdi: string
   }
-  elevforhold?: Array<FintElevforhold | null> | null
+  elevforhold: Array<FintElevforhold | null> | null
 }
 
 export type FintSchoolWithStudentsVariables = Exact<{
-  schoolNumber: Scalars["String"]["input"]
+  schoolNumber: string
 }>
 
 export type FintSchoolWithStudents = {
-  skole?: FintSkole | null
+  skole: FintSkole | null
 }
