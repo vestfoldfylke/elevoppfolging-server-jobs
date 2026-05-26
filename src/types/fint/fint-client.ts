@@ -15,6 +15,7 @@ export type FintConfig = {
   TOKEN_URL: string
   API_URL: string
   VERSION: string
+  SCHOOL_NUMBERS_TO_SKIP: string[]
 }
 
 export type FintAccessTokenResponse = {

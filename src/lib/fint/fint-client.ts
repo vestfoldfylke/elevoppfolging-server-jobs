@@ -26,12 +26,21 @@ export class FintClient implements IFintClient {
       throw new Error("_embedded._entries must be an array")
     }
 
-    return schools._embedded._entries.map((school: FintSkoleInfo) => {
-      return {
-        navn: school.navn,
-        skolenummer: school.skolenummer
-      }
-    })
+    return schools._embedded._entries
+      .map((school: FintSkoleInfo) => {
+        return {
+          navn: school.navn,
+          skolenummer: school.skolenummer
+        }
+      })
+      .filter((school: FintSkoleInfo) => {
+        if (authOptions?.SCHOOL_NUMBERS_TO_SKIP.includes(school.skolenummer.identifikatorverdi)) {
+          logger.info("School with SchoolName '{SchoolName}' and SchoolNumber {SchoolNumber} will be skipped", school.navn, school.skolenummer.identifikatorverdi)
+          return false
+        }
+
+        return true
+      })
   }
 
   async getSchoolWithStudents(schoolNumber: string): Promise<FintSchoolWithStudents> {

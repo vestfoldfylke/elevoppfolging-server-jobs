@@ -49,6 +49,7 @@ export const syncDbData = async (): Promise<void> => {
       )
     } catch (error) {
       logger.errorException(error, "Failed to fetch students for school {SchoolName} ({SchoolNumber}), skipping...", skole.navn, skole.skolenummer.identifikatorverdi)
+      throw error
     }
   }
   logger.info("Fetched students for all {SchoolCount} schools", schoolsWithStudents.length)

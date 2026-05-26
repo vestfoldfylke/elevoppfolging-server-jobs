@@ -171,7 +171,7 @@ const testEditor: EditorData = {
 
 describe("repackPeriode", () => {
   it("should return correct start date for periode with no end date", () => {
-    const periode: FintGyldighetsPeriode = { start: "2020-01-01" }
+    const periode: FintGyldighetsPeriode = { start: "2020-01-01", slutt: null }
     const repacked = repackPeriode(periode)
     assert(repacked.start?.getTime() === new Date(periode.start).getTime(), `Expected start date ${periode.start}, got ${repacked.start}`)
   })

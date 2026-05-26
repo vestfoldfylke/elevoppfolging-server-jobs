@@ -63,6 +63,8 @@ export const getFintConfig = (): FintConfig => {
     throw new Error("FINT_CLIENT_SECRET must be set to a valid FINT client secret")
   }
 
+  const schoolNumbersToSkip: string = process.env.FINT_SKIP_SCHOOL_NUMBERS || ""
+
   return {
     USERNAME: username,
     PASSWORD: password,
@@ -71,7 +73,8 @@ export const getFintConfig = (): FintConfig => {
     SCOPE: process.env.FINT_SCOPE || "fint-client",
     TOKEN_URL: process.env.FINT_TOKEN_URL || "https://idp.felleskomponent.no/nidp/oauth/nam/token",
     API_URL: process.env.FINT_API_URL || "https://api.felleskomponent.no",
-    VERSION: getFintVersion()
+    VERSION: getFintVersion(),
+    SCHOOL_NUMBERS_TO_SKIP: schoolNumbersToSkip.trim().split(",")
   }
 }
 

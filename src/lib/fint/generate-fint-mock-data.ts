@@ -100,6 +100,7 @@ const generateSkoleressurs = (): FintSkoleressurs => {
     person: {
       navn: {
         fornavn: uniqueName.firstName,
+        mellomnavn: null,
         etternavn: uniqueName.lastName
       }
     }
@@ -170,6 +171,7 @@ const generateElev = (): FintElev => {
       bostedsadresse: generateAddress(),
       navn: {
         fornavn: uniqueName.firstName,
+        mellomnavn: null,
         etternavn: uniqueName.lastName
       },
       fodselsnummer: {
