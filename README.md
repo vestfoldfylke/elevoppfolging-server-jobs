@@ -28,6 +28,7 @@ requires following values in `./local.settings.json`
     "MOCK_FINT_DATA_PATH": "full-path-to-mock-data.json", // only used if MOCK_FINT is true
     "MOCK_ENTRA": "true",
     "MOCK_DB": "true",
+    "FINT_SKIP_SCHOOL_NUMBERS": "1234,5678", // optional comma-separated list of school numbers to skip when fetching data from FINT
     "FEIDENAME_SUFFIX": "suffix-used-in-feide",
     "APP_NAME": "Elevoppfølging",
     "MONGODB_CONNECTION_STRING": "<connection-string>",
