@@ -44,7 +44,7 @@ const getValidGraphQlArray = <T, U>(input: StupidMaybeArray<T>, typeName: string
     } else {
       logger.warn(
         "Person med brukernavn {Username} har ingen {Type}",
-        elevOrMessage.feidenavn || elevOrMessage.elevnummer || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
+        elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
         typeName
       )
     }
