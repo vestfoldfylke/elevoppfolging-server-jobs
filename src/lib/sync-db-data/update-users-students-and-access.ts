@@ -111,8 +111,20 @@ export const updateUsersStudentsAndAccess = (
     )
   }
 
-  const studentSsns = updatedStudents.map((student) => ({ systemId: student.systemId, ssn: student.ssn }))
-  const duplicateStudentSsns = studentSsns.filter((ssnObj, index, arr) => arr.findIndex((obj) => obj.ssn === ssnObj.ssn && obj.ssn !== undefined) !== index).map((obj) => obj.systemId)
+  const ssnToSystemIds = new Map<string, string[]>()
+  for (const student of updatedStudents) {
+    if (student.ssn === undefined) {
+      continue
+    }
+
+    const ids: string[] = ssnToSystemIds.get(student.ssn) ?? []
+    ids.push(student.systemId)
+    ssnToSystemIds.set(student.ssn, ids)
+  }
+  const duplicateStudentSsns: string[] = Array.from(ssnToSystemIds.values())
+    .filter((ids) => ids.length > 1)
+    .flat()
+
   if (duplicateStudentSsns.length > 0) {
     logger.error(
       "Det finnes {DuplicateCount} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: {@DuplicateSsnSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
