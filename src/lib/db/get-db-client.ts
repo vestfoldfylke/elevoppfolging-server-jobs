@@ -13,9 +13,6 @@ if (MOCK_DB) {
   if (!MONGODB.CONNECTION_STRING) {
     throw new Error("MONGODB_CONNECTION_STRING is not set (du har glemt den)")
   }
-  if (!MONGODB.DB_NAME) {
-    throw new Error("MONGODB_DB_NAME is not set (du har glemt den)")
-  }
   if (!AZURE.TENANT_ID || !AZURE.CLIENT_ID || !AZURE.CLIENT_SECRET) {
     throw new Error("Azure credentials for client-side encryption is not fully set (du har glemt en av AZURE_TENANT_ID, AZURE_CLIENT_ID eller AZURE_CLIENT_SECRET)")
   }
