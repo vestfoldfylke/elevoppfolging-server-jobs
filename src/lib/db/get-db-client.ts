@@ -36,11 +36,8 @@ if (MOCK_DB) {
     }
   })
 
-  const mongoClient = new MongoClient(MONGODB.CONNECTION_STRING)
-
   try {
     await mongoEncryptionClient.connect()
-    await mongoClient.connect()
   } catch (error) {
     logger.errorException(error, "Error when connecting to MongoDB - check your configuration")
     await logger.flush()
