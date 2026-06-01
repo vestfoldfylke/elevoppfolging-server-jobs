@@ -141,7 +141,7 @@ export class MongoDbClient implements IDbClient {
 
   async getEmailAlertsToHandle(): Promise<DbEmailAlert[]> {
     try {
-      return this.db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).find({ status: "QUEUED" }).toArray()
+      return await this.db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).find({ status: "QUEUED" }).toArray()
     } catch (error) {
       logger.errorException(error, "Error fetching email alerts to handle")
       return []
