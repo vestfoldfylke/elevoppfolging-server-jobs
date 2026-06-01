@@ -60,6 +60,13 @@ if (MOCK_DB) {
     throw error
   }
 
+  if (encryptionKeyIds.length === 0) {
+    logger.error("No encryption keys found in MongoDB")
+    await logger.flush()
+
+    throw new Error("No encryption keys found in MongoDB")
+  }
+
   const encryptValue = async (value: unknown): Promise<Binary> => {
     const encryptionOptions: ClientEncryptionEncryptOptions = {
       algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
