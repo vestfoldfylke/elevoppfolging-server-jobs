@@ -121,18 +121,18 @@ export const updateUsersStudentsAndAccess = (
     ids.push(student.systemId)
     ssnToSystemIds.set(student.ssn, ids)
   }
-  const duplicateStudentSsns: string[] = Array.from(ssnToSystemIds.values())
+  const duplicateStudentSystemIdsBySsn: string[] = Array.from(ssnToSystemIds.values())
     .filter((ids) => ids.length > 1)
     .flat()
 
-  if (duplicateStudentSsns.length > 0) {
+  if (duplicateStudentSystemIdsBySsn.length > 0) {
     logger.error(
       "Det finnes {DuplicateCount} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: {@DuplicateSsnSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
-      duplicateStudentSsns.length,
-      duplicateStudentSsns
+      duplicateStudentSystemIdsBySsn.length,
+      duplicateStudentSystemIdsBySsn
     )
     throw new Error(
-      `Det finnes ${duplicateStudentSsns.length} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
+      `Det finnes ${duplicateStudentSystemIdsBySsn.length} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: ${duplicateStudentSystemIdsBySsn.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
     )
   }
 
