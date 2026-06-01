@@ -102,17 +102,26 @@ export const updateUsersStudentsAndAccess = (
   const duplicateStudentSystemIds = studentSystemIds.filter((systemId, index) => studentSystemIds.indexOf(systemId) !== index)
   if (duplicateStudentSystemIds.length > 0) {
     logger.error(
-      "Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      "Det finnes {DuplicateCount} duplikate elever i databasen med samme systemId: {@DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIds.length,
       duplicateStudentSystemIds
     )
-    throw new Error(`Det finnes duplikate elever i databasen med systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+    throw new Error(
+      `Det finnes ${duplicateStudentSystemIds.length} duplikate elever i databasen med samme systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
+    )
   }
 
-  const studentSsns = updatedStudents.map((student) => student.ssn)
-  const duplicateStudentSsns = studentSsns.filter((ssn, index) => studentSsns.indexOf(ssn) !== index)
+  const studentSsns = updatedStudents.map((student) => ({ systemId: student.systemId, ssn: student.ssn }))
+  const duplicateStudentSsns = studentSsns.filter((ssnObj, index, arr) => arr.findIndex((obj) => obj.ssn === ssnObj.ssn && obj.ssn !== undefined) !== index).map((obj) => obj.systemId)
   if (duplicateStudentSsns.length > 0) {
-    logger.error("Det finnes duplikate elever i databasen med ssn: {DuplicateSsns}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.", duplicateStudentSsns)
-    throw new Error(`Det finnes duplikate elever i databasen med ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+    logger.error(
+      "Det finnes {DuplicateCount} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: {@DuplicateSsnSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSsns.length,
+      duplicateStudentSsns
+    )
+    throw new Error(
+      `Det finnes ${duplicateStudentSsns.length} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
+    )
   }
 
   // wipe all previous student enrollments except manual, and set all students to inactive
