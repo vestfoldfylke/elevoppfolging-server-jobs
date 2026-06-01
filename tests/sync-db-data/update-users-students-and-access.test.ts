@@ -257,6 +257,84 @@ describe("sync-db-data/update-users-students-and-access", () => {
         assert(validation.valid, `Student validation failed: ${validation.reason}`)
       }
     })
+
+    it("should throw when there are students with duplicate ssn", () => {
+      // find duplicate students by ssn
+      const duplicateSsn1 = "12345678910"
+      const duplicateStudents: DbAppStudent[] = [
+        {
+          _id: new ObjectId(),
+          feideName: "student.one",
+          name: "Student One",
+          ssn: duplicateSsn1,
+          created: testEditor,
+          modified: testEditor,
+          source: "AUTO",
+          studentEnrollments: [],
+          studentNumber: "S10001",
+          systemId: "student-system-id-1"
+        },
+        {
+          _id: new ObjectId(),
+          feideName: "student.two",
+          name: "Student Two",
+          ssn: duplicateSsn1,
+          created: testEditor,
+          modified: testEditor,
+          source: "AUTO",
+          studentEnrollments: [],
+          studentNumber: "S10002",
+          systemId: "student-system-id-2"
+        }
+      ]
+
+      assert.throws(
+        () => {
+          updateUsersStudentsAndAccess([], duplicateStudents, [], [], [], [])
+        },
+        /^Error: .+duplikate elever i databasen med samme ssn.+$/,
+        "Expected error due to duplicate students by ssn, but no error was thrown"
+      )
+    })
+
+    it("should throw when there are students with duplicate systemId", () => {
+      // find duplicate students by systemId
+      const duplicateSystemId = "student-system-id-1"
+      const duplicateStudents: DbAppStudent[] = [
+        {
+          _id: new ObjectId(),
+          feideName: "student.one",
+          name: "Student One",
+          ssn: "1234",
+          created: testEditor,
+          modified: testEditor,
+          source: "AUTO",
+          studentEnrollments: [],
+          studentNumber: "S10001",
+          systemId: duplicateSystemId
+        },
+        {
+          _id: new ObjectId(),
+          feideName: "student.two",
+          name: "Student Two",
+          ssn: "5678",
+          created: testEditor,
+          modified: testEditor,
+          source: "AUTO",
+          studentEnrollments: [],
+          studentNumber: "S10002",
+          systemId: duplicateSystemId
+        }
+      ]
+
+      assert.throws(
+        () => {
+          updateUsersStudentsAndAccess([], duplicateStudents, [], [], [], [])
+        },
+        /^Error: .+duplikate elever i databasen med samme systemId.+$/,
+        "Expected error due to duplicate students by systemId, but no error was thrown"
+      )
+    })
   })
 
   describe("data is mapped and updated correctly when previous data is present", async () => {

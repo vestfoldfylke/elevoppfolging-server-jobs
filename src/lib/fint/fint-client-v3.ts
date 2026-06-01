@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { logger } from "@vestfoldfylke/loglady"
-import { getFintConfig, MOCK_FINT } from "../../config.js"
+import { FINT_VERSION, getFintConfig, MOCK_FINT } from "../../config.js"
 import type { FintConfig, FintGraphQlResponse, FintPayload, FintQueryVariables, IFintClient } from "../../types/fint/fint-client.js"
 import type { FintSkoleInfo, FintSkolerRest } from "../../types/fint/fint-school.js"
 import type { FintElevforhold, FintKlassemedlemskap, FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
@@ -14,7 +14,7 @@ export class FintClientV3 implements IFintClient {
 
   constructor() {
     this.schoolWithStudentsQuery = readFileSync("./src/lib/fint/queries/school-with-students-v3.graphql", "utf8")
-    logger.info("Initialized FINT client for FINT version {FintVersion}", process.env.FINT_VERSION)
+    logger.info("Initialized FINT client for FINT version {FintVersion}", FINT_VERSION)
   }
 
   async getSchools(): Promise<FintSkoleInfo[]> {

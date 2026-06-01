@@ -25,7 +25,7 @@
     "@azure/functions": "^4.16.0",
     "@azure/identity": "^4.13.1",
     "@faker-js/faker": "^10.4.0",
-    "@vestfoldfylke/loglady": "^1.5.3",
+    "@vestfoldfylke/loglady": "^2.0.0",
     "mongodb": "^7.2.0"
   },
   "devDependencies": {

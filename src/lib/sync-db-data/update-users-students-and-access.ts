@@ -44,7 +44,7 @@ const getValidGraphQlArray = <T, U>(input: StupidMaybeArray<T>, typeName: string
     } else {
       logger.warn(
         "Person med brukernavn {Username} har ingen {Type}",
-        elevOrMessage.feidenavn || elevOrMessage.elevnummer || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
+        elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
         typeName
       )
     }
@@ -102,17 +102,38 @@ export const updateUsersStudentsAndAccess = (
   const duplicateStudentSystemIds = studentSystemIds.filter((systemId, index) => studentSystemIds.indexOf(systemId) !== index)
   if (duplicateStudentSystemIds.length > 0) {
     logger.error(
-      "Det finnes duplikate elever i databasen med systemId: {DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      "Det finnes {DuplicateCount} duplikate elever i databasen med samme systemId: {@DuplicateSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIds.length,
       duplicateStudentSystemIds
     )
-    throw new Error(`Det finnes duplikate elever i databasen med systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+    throw new Error(
+      `Det finnes ${duplicateStudentSystemIds.length} duplikate elever i databasen med samme systemId: ${duplicateStudentSystemIds.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
+    )
   }
 
-  const studentSsns = updatedStudents.map((student) => student.ssn)
-  const duplicateStudentSsns = studentSsns.filter((ssn, index) => studentSsns.indexOf(ssn) !== index)
-  if (duplicateStudentSsns.length > 0) {
-    logger.error("Det finnes duplikate elever i databasen med ssn: {DuplicateSsns}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.", duplicateStudentSsns)
-    throw new Error(`Det finnes duplikate elever i databasen med ssn: ${duplicateStudentSsns.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`)
+  const ssnToSystemIds = new Map<string, string[]>()
+  for (const student of updatedStudents) {
+    if (student.ssn === undefined) {
+      continue
+    }
+
+    const ids: string[] = ssnToSystemIds.get(student.ssn) ?? []
+    ids.push(student.systemId)
+    ssnToSystemIds.set(student.ssn, ids)
+  }
+  const duplicateStudentSystemIdsBySsn: string[] = Array.from(ssnToSystemIds.values())
+    .filter((ids) => ids.length > 1)
+    .flat()
+
+  if (duplicateStudentSystemIdsBySsn.length > 0) {
+    logger.error(
+      "Det finnes {DuplicateCount} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: {@DuplicateSsnSystemIds}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.",
+      duplicateStudentSystemIdsBySsn.length,
+      duplicateStudentSystemIdsBySsn
+    )
+    throw new Error(
+      `Det finnes ${duplicateStudentSystemIdsBySsn.length} duplikate elever i databasen med samme ssn. SystemIds med samme ssn: ${duplicateStudentSystemIdsBySsn.join(", ")}. Vennligst håndter duplikatene før du kjører synkroniseringen for å unngå tullball.`
+    )
   }
 
   // wipe all previous student enrollments except manual, and set all students to inactive

@@ -23,6 +23,6 @@ export async function SyncUsersAndStudents(): Promise<HttpResponseInit> {
 
 app.http("SyncStudentsAndAccess", {
   methods: ["POST"],
-  authLevel: "anonymous",
+  authLevel: "function",
   handler: SyncUsersAndStudents
 })
