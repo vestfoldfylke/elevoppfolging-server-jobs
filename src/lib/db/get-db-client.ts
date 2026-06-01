@@ -57,12 +57,17 @@ if (MOCK_DB) {
   } catch (error) {
     logger.errorException(error, "Error when fetching encryption keys from MongoDB, check your configuration")
     await logger.flush()
+
+    await mongoEncryptionClient.close()
+
     throw error
   }
 
   if (encryptionKeyIds.length === 0) {
     logger.error("No encryption keys found in MongoDB")
     await logger.flush()
+
+    await mongoEncryptionClient.close()
 
     throw new Error("No encryption keys found in MongoDB")
   }
