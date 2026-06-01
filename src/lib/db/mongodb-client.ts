@@ -172,23 +172,6 @@ export class MongoDbClient implements IDbClient {
       throw error
     }
   }
-
-  async getStudentNameById(studentId: string): Promise<string | null> {
-    try {
-      const db: Db = await this.getDb()
-
-      const student: WithId<DbAppStudent> | null = await db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).findOne({ _id: new ObjectId(studentId) })
-      if (!student) {
-        logger.error("Student with Id {StudentId} not found", studentId)
-        return null
-      }
-
-      return student.name
-    } catch (error) {
-      logger.errorException(error, "Error fetching student with Id {StudentId}", studentId)
-      throw error
-    }
-  }
 }
 
 /* Manuelle elever - de kommer ikke fra FINT. Så hvis vi wiper, må vi lagre dem et sted */
