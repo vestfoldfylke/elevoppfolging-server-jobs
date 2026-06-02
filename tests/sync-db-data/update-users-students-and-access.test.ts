@@ -575,6 +575,7 @@ describe("sync-db-data/update-users-students-and-access", () => {
         ],
         leaderForSchools: [],
         manageManualStudentsForSchools: [],
+        allStudentsAtSchools: [],
         students: [],
         classes: [
           {
