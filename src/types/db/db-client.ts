@@ -15,6 +15,4 @@ export interface IDbClient {
 
   getEmailAlertsToHandle: () => Promise<DbEmailAlert[]>
   updateEmailAlert: (updatedAlert: DbEmailAlert) => Promise<void>
-
-  getStudentNameById: (studentId: string) => Promise<string | null>
 }

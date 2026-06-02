@@ -78,6 +78,8 @@ export type School = NewSchool & {
   _id: string
 }
 
+export type UpdateSchool = SchoolInfo
+
 export type DbSchool = NewSchool & {
   _id: ObjectId
 }
@@ -130,6 +132,10 @@ export type DbAppStudent = NewAppStudent & {
   _id: ObjectId
 }
 
+export type DbEncryptedAppStudent = Omit<DbAppStudent, "hasBlockedAddress"> & {
+  hasBlockedAddress: Binary
+}
+
 export type UpdateAppStudent = AppStudent
 
 export type NewManualStudentInput = {
@@ -164,6 +170,14 @@ export type ManageManualStudentsManualAccessEntryInput = {
 }
 
 export type ManageManualStudentsManualAccessEntry = AccessEntryBase & ManageManualStudentsManualAccessEntryInput
+
+export type AllStudentsAtSchoolsManualAccessEntryInput = {
+  /** Hvilken skole gjelder tilgangen for */
+  schoolNumber: string
+  type: "MANUELL-ALLE-ELEVER-VED-SKOLE-TILGANG"
+}
+
+export type AllStudentsAtSchoolsManualAccessEntry = AccessEntryBase & AllStudentsAtSchoolsManualAccessEntryInput
 
 export type ProgramAreaManualAccessEntryInput = {
   /** Hvilken skole gjelder tilgangen for */
@@ -206,6 +220,7 @@ export type ClassManualAccessEntry = AccessEntryBase & ClassManualAccessEntryInp
 export type ManualAccessEntryInput =
   | SchoolLeaderManualAccessEntryInput
   | ManageManualStudentsManualAccessEntryInput
+  | AllStudentsAtSchoolsManualAccessEntryInput
   | ProgramAreaManualAccessEntryInput
   | StudentManualAccessEntryInput
   | ClassManualAccessEntryInput
@@ -238,6 +253,7 @@ export type NewAccess = {
   entraUserId: string
   name: string
   leaderForSchools: SchoolLeaderManualAccessEntry[]
+  allStudentsAtSchools: AllStudentsAtSchoolsManualAccessEntry[]
   manageManualStudentsForSchools: ManageManualStudentsManualAccessEntry[]
   programAreas: ProgramAreaManualAccessEntry[]
   classes: (ClassAutoAccessEntry | ClassManualAccessEntry)[]
@@ -449,6 +465,7 @@ export type DbEncryptedStudentDocumentUpdate = Omit<StudentDocumentUpdate, "titl
 
 export type StudentDocument = NewStudentDocument & {
   _id: string
+  isDocumentLocked: boolean
 }
 
 export type NewDbStudentDocument = Omit<NewStudentDocument, "student"> & {
@@ -498,6 +515,7 @@ export type DbEncryptedGroupDocumentUpdate = Omit<GroupDocumentUpdate, "title" |
 
 export type GroupDocument = NewGroupDocument & {
   _id: string
+  isDocumentLocked: boolean
 }
 
 export type NewDbGroupDocument = Omit<NewGroupDocument, "group"> & {

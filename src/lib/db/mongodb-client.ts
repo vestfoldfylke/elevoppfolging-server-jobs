@@ -1,39 +1,20 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { type Db, type Document, MongoClient, ObjectId, type OptionalUnlessRequiredId, type WithId } from "mongodb"
+import { type Binary, type Db, type Document, ObjectId, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbEmailAlert, DbSchool, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
+import type { DbAccess, DbAppStudent, DbAppUser, DbEmailAlert, DbEncryptedAppStudent, DbSchool, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
-  private readonly mongoClient: MongoClient
-  private db: Db | null = null
+  private readonly db: Db
+  private readonly encryptValue: (value: unknown) => Promise<Binary>
 
-  constructor() {
-    if (!MONGODB.CONNECTION_STRING) {
-      throw new Error("MONGODB_CONNECTION_STRING is not set (du har glemt den)")
-    }
-
-    this.mongoClient = new MongoClient(MONGODB.CONNECTION_STRING)
-  }
-
-  private async getDb(): Promise<Db> {
-    if (this.db) {
-      return this.db
-    }
-
-    try {
-      await this.mongoClient.connect()
-      this.db = this.mongoClient.db(MONGODB.DB_NAME)
-      return this.db
-    } catch (error) {
-      logger.errorException(error, "Error when connecting to MongoDB")
-      throw error
-    }
+  constructor(db: Db, encryptValue: (value: unknown) => Promise<Binary>) {
+    this.db = db
+    this.encryptValue = encryptValue
   }
 
   private async replaceCollection<T extends Document>(collectionName: string, items: OptionalUnlessRequiredId<T>[]): Promise<void> {
-    const db = await this.getDb()
-    const collections = await db.listCollections().toArray()
+    const collections = await this.db.listCollections().toArray()
 
     const previousCollectionName = `${collectionName}_previous`
     const newCollectionName = `${collectionName}_new`
@@ -49,7 +30,7 @@ export class MongoDbClient implements IDbClient {
     if (hasPrevious) {
       try {
         logger.info("Renaming collection {PreviousCollectionName} to {NewCollectionName}", previousCollectionName, newCollectionName)
-        await db.collection(previousCollectionName).rename(newCollectionName)
+        await this.db.collection(previousCollectionName).rename(newCollectionName)
         logger.info("Renamed collection {PreviousCollectionName} to {NewCollectionName}", previousCollectionName, newCollectionName)
       } catch (error) {
         logger.errorException(error, `Error renaming collection ${previousCollectionName} to ${newCollectionName}`)
@@ -59,7 +40,7 @@ export class MongoDbClient implements IDbClient {
 
     // Now, insert into collection
     try {
-      const collection = db.collection<T>(newCollectionName)
+      const collection = this.db.collection<T>(newCollectionName)
 
       await collection.deleteMany({})
       if (items.length > 0) {
@@ -78,7 +59,7 @@ export class MongoDbClient implements IDbClient {
     if (hasCurrent) {
       try {
         logger.info("Renaming collection {CollectionName} to {PreviousCollectionName}", collectionName, previousCollectionName)
-        await db.collection(collectionName).rename(previousCollectionName)
+        await this.db.collection(collectionName).rename(previousCollectionName)
         logger.info("Renamed collection {CollectionName} to {PreviousCollectionName}", collectionName, previousCollectionName)
       } catch (error) {
         logger.errorException(error, `Error renaming collection ${collectionName} to ${previousCollectionName}`)
@@ -95,7 +76,7 @@ export class MongoDbClient implements IDbClient {
     if (items.length === 0) {
       try {
         logger.info("{itemCount} items to insert into {CollectionName}. Removing any possible current items...", items.length, collectionName)
-        await db.collection(collectionName).deleteMany({})
+        await this.db.collection(collectionName).deleteMany({})
 
         return
       } catch (error) {
@@ -106,7 +87,7 @@ export class MongoDbClient implements IDbClient {
 
     try {
       logger.info("Renaming collection {NewCollectionName} to {CollectionName}", newCollectionName, collectionName)
-      await db.collection(newCollectionName).rename(collectionName)
+      await this.db.collection(newCollectionName).rename(collectionName)
       logger.info("Renamed collection {NewCollectionName} to {CollectionName}", newCollectionName, collectionName)
     } catch (error) {
       logger.errorException(error, `Error renaming collection ${newCollectionName} to ${collectionName}`)
@@ -115,17 +96,27 @@ export class MongoDbClient implements IDbClient {
   }
 
   async getStudents(): Promise<DbAppStudent[]> {
-    const db = await this.getDb()
-    return db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).find().toArray()
+    return this.db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).find().toArray()
   }
 
   async replaceStudents(students: (DbAppStudent | NewAppStudent)[]): Promise<void> {
-    await this.replaceCollection<DbAppStudent | NewAppStudent>(MONGODB.COLLECTIONS.STUDENTS, students)
+    const encryptedStudents: DbEncryptedAppStudent[] = []
+
+    for (const student of students) {
+      const encryptedHasBlockedAddress: Binary = await this.encryptValue(student.hasBlockedAddress ?? false)
+
+      encryptedStudents.push({
+        ...student,
+        _id: "_id" in student ? student._id : new ObjectId(),
+        hasBlockedAddress: encryptedHasBlockedAddress
+      })
+    }
+
+    await this.replaceCollection<DbEncryptedAppStudent>(MONGODB.COLLECTIONS.STUDENTS, encryptedStudents)
   }
 
   async getUsers(): Promise<DbAppUser[]> {
-    const db = await this.getDb()
-    return db.collection<DbAppUser>(MONGODB.COLLECTIONS.USERS).find().toArray()
+    return this.db.collection<DbAppUser>(MONGODB.COLLECTIONS.USERS).find().toArray()
   }
 
   async replaceUsers(users: (DbAppUser | NewAppUser)[]): Promise<void> {
@@ -133,8 +124,7 @@ export class MongoDbClient implements IDbClient {
   }
 
   async getAccess(): Promise<DbAccess[]> {
-    const db = await this.getDb()
-    return db.collection<DbAccess>(MONGODB.COLLECTIONS.ACCESS).find().toArray()
+    return this.db.collection<DbAccess>(MONGODB.COLLECTIONS.ACCESS).find().toArray()
   }
 
   async replaceAccess(accesses: (DbAccess | NewDbAccess)[]): Promise<void> {
@@ -142,8 +132,7 @@ export class MongoDbClient implements IDbClient {
   }
 
   async getSchools(): Promise<DbSchool[]> {
-    const db = await this.getDb()
-    return await db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).find().toArray()
+    return this.db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).find().toArray()
   }
 
   async replaceSchools(schools: (DbSchool | NewSchool)[]): Promise<void> {
@@ -152,9 +141,7 @@ export class MongoDbClient implements IDbClient {
 
   async getEmailAlertsToHandle(): Promise<DbEmailAlert[]> {
     try {
-      const db: Db = await this.getDb()
-
-      return await db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).find({ status: "QUEUED" }).toArray()
+      return await this.db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).find({ status: "QUEUED" }).toArray()
     } catch (error) {
       logger.errorException(error, "Error fetching email alerts to handle")
       return []
@@ -163,29 +150,10 @@ export class MongoDbClient implements IDbClient {
 
   async updateEmailAlert(updatedAlert: DbEmailAlert): Promise<void> {
     try {
-      const db: Db = await this.getDb()
-
-      await db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).updateOne({ _id: updatedAlert._id }, { $set: { ...updatedAlert } })
+      await this.db.collection<DbEmailAlert>(MONGODB.COLLECTIONS.EMAIL_ALERTS).updateOne({ _id: updatedAlert._id }, { $set: { ...updatedAlert } })
       logger.info("Updated EmailAlert with Id {EmailAlertId}", updatedAlert._id.toString())
     } catch (error) {
       logger.errorException(error, "Error updating email alert with Id {EmailAlertId}. UpdatedAlert: {@UpdatedAlert}", updatedAlert._id.toString(), updatedAlert)
-      throw error
-    }
-  }
-
-  async getStudentNameById(studentId: string): Promise<string | null> {
-    try {
-      const db: Db = await this.getDb()
-
-      const student: WithId<DbAppStudent> | null = await db.collection<DbAppStudent>(MONGODB.COLLECTIONS.STUDENTS).findOne({ _id: new ObjectId(studentId) })
-      if (!student) {
-        logger.error("Student with Id {StudentId} not found", studentId)
-        return null
-      }
-
-      return student.name
-    } catch (error) {
-      logger.errorException(error, "Error fetching student with Id {StudentId}", studentId)
       throw error
     }
   }

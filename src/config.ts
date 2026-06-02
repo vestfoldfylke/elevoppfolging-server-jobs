@@ -42,6 +42,12 @@ if (!MOCK_ENTRA && !process.env.FRONTEND_APP_CLIENT_ID) {
 
 export const FRONTEND_APP_CLIENT_ID = process.env.FRONTEND_APP_CLIENT_ID
 
+export const AZURE = {
+  CLIENT_ID: process.env.AZURE_CLIENT_ID,
+  CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
+  TENANT_ID: process.env.AZURE_TENANT_ID
+}
+
 export const getFintConfig = (): FintConfig => {
   const username: string | undefined = process.env.FINT_USERNAME
   if (!username) {

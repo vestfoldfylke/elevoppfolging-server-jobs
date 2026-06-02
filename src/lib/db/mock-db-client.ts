@@ -136,17 +136,6 @@ export class MockDbClient implements IDbClient {
     console.log("Email alert updated successfully in mock db")
   }
 
-  async getStudentNameById(studentId: string): Promise<string | null> {
-    // For mock purposes, randomly return a name or null
-    const randomNum: number = Math.floor(Math.random() * 10)
-
-    if (randomNum < 5) {
-      return `${norwegianFaker.person.fullName()} ${studentId}`
-    }
-
-    return null
-  }
-
   private fillEmailAlertsDb(): void {
     const totalNumOfEmailAlerts: number = Math.floor(Math.random() * 25)
     console.log("Filling mock db email alerts with", totalNumOfEmailAlerts, "email alerts")

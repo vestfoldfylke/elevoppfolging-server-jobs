@@ -346,7 +346,8 @@ export const updateUsersStudentsAndAccess = (
         contactTeacherGroups: [],
         teachingGroups: [],
         students: [],
-        manageManualStudentsForSchools: []
+        manageManualStudentsForSchools: [],
+        allStudentsAtSchools: []
       }
       updatedAccess.push(teacherAccess)
     }
