@@ -443,7 +443,7 @@ describe("sync-db-data/update-users-students-and-access", () => {
         systemId: "manuell-løk-id",
         name: "Manuell Løk",
         ssn: manualStudentSuddenlyInFint.elev.person.fodselsnummer.identifikatorverdi,
-        source: "MANUAL", // TODO oppdateres denne da? Skal vi oppdatere den i det hele tatt? Ja, hvis den dukker opp i FINT, er den ikke MANUAL lenger, og da bør source oppdateres.
+        source: "MANUAL",
         studentEnrollments: [
           {
             school: {
