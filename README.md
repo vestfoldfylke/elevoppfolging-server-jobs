@@ -68,16 +68,19 @@ requires following values in `./local.settings.json`
 
 ### Setup
 
-#### generate-fint-types
+#### generate-fint-types / generate-fint-types-v3
 
 Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
 
 ```bash
-# Generer en FINT Bearer token og lim inn når generering av typer trengs
+# Generer en FINT Bearer token (fra en v3 eller v4 client) og lim inn når generering av typer trengs
 FINT_GENERATE_TYPES_MANUAL_KEY=""
 ```
 
-Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+- **Generate V4 types**
+  - Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+- **Generate V3 types**
+  - Kjør `npm run generate-fint-types-v3`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
 
 #### get-encryption-keys
 Gets (and creates if missing) a given number of data encryption keys (see script file)
