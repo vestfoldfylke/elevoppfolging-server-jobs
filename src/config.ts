@@ -7,10 +7,6 @@ export const MOCK_FINT = process.env.MOCK_FINT === "true"
 
 export const FINT_VERSION: string = getFintVersion()
 
-if (MOCK_FINT && !process.env.MOCK_FINT_DATA_PATH?.endsWith(".json")) {
-  throw new Error("MOCK_FINT is set to true, but MOCK_FINT_DATA_PATH is not set to a valid .json file path")
-}
-
 export const APP_NAME = process.env.APP_NAME || "elevoppfolging-server-jobs"
 
 export const MOCK_FINT_DATA_PATH = process.env.MOCK_FINT_DATA_PATH

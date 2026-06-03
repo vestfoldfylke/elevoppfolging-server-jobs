@@ -1,3 +1,5 @@
+import type { FintSkole } from "./fint-school-with-students.js"
+
 export type MockFintSchool = {
   name: string
   schoolNumber: string
@@ -11,4 +13,5 @@ export type GenerateMockFintSchoolsWithStudentsOptions = {
   numberOfKontaktlarergrupper: number
   numberOfTeachers: number
   minimumNumberOfStudentsWithBlockedAddress: number
+  predefinedSchoolStudents: FintSkole[]
 }

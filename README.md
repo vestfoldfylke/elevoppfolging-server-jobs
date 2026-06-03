@@ -68,31 +68,21 @@ requires following values in `./local.settings.json`
 
 ### Setup
 
-#### generate-fint-types
+#### generate-fint-types / generate-fint-types-v3
 
 Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
 
 ```bash
-# Generer en FINT Bearer token og lim inn når generering av typer trengs
+# Generer en FINT Bearer token (fra en v3 eller v4 client) og lim inn når generering av typer trengs
 FINT_GENERATE_TYPES_MANUAL_KEY=""
 ```
 
-Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+- **Generate V4 types**
+  - Kjør `npm run generate-fint-types`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
+- **Generate V3 types**
+  - Kjør `npm run generate-fint-types-v3`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
 
-#### generate-fint-mock-data
-
-Generates FINT-mock data and saves to local file - which is used as source data when running in mock-fint mode
-
-Opprett en .env-fil i rotmappen, og legg inn følgende variabler:
-
-```bash
-# Address used on persons with an active address block in FINT. This is used to set the "hasActiveAddressBlock" property on appStudents. (default: "SPERRET ADRESSE")
-FINT_ADDRESS_BLOCK="SPERRET ADRESSE"
-```
-
-Kjør `npm run generate-fint-mock-data`. Scriptet vil da hente data fra FINT API'et, og generere mock data i den angitte .json-filen.
-
-#### get-encryption-keys
+#### get-and-create-if-not-exists-encryption-keys
 Gets (and creates if missing) a given number of data encryption keys (see script file)
 Must be run before initial startup of elevoppfølging web app for it to work.
 
