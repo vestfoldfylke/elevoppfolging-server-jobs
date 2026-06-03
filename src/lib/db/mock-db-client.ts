@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { ObjectId } from "mongodb"
 import type { IDbClient } from "../../types/db/db-client.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbEmailAlert, DbSchool, EmailAlertReceiver, EmailAlertStatus, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
-import { norwegianFaker } from "../fint/generate-fint-mock-data.js"
+import { norwegianFaker } from "../norwegian-faker.js"
 
 type MockDb = {
   access: DbAccess[]

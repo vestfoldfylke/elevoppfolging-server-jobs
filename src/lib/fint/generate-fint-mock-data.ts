@@ -1,4 +1,3 @@
-import { en, Faker, nb_NO } from "@faker-js/faker"
 import { logger } from "@vestfoldfylke/loglady"
 import { FINT_ADDRESS_BLOCK } from "../../config.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions, MockFintSchool } from "../../types/fint/fint-mock.js"
@@ -13,11 +12,8 @@ import type {
   FintUndervisningsforhold,
   FintUndervisningsgruppe
 } from "../../types/fint/fint-school-with-students.js"
+import { norwegianFaker } from "../norwegian-faker.js"
 import { getUniqueStudents } from "./utils.js"
-
-export const norwegianFaker = new Faker({
-  locale: [nb_NO, en]
-})
 
 const validPeriod: FintGyldighetsPeriode = {
   start: "2022-08-15T00:00:00Z",
