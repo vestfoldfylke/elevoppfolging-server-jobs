@@ -1,15 +1,15 @@
 import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
-import { en, Faker, nb_NO } from "@faker-js/faker"
 import { ObjectId } from "mongodb"
 import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
-import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-data.js"
+import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-schools-with-students.js"
 import { getUniqueStudents } from "../../src/lib/fint/utils.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/update-users-students-and-access.js"
+import { getStaticMockFintSchools } from "../../src/mock-data/static-mock-fint-schools.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
-import type { GenerateMockFintSchoolsWithStudentsOptions } from "../../src/types/fint/fint-mock.js"
+import type { GenerateMockFintSchoolsWithStudentsOptions, MockFintSchool } from "../../src/types/fint/fint-mock.js"
 import type {
   FintElev,
   FintElevforhold,
@@ -17,6 +17,7 @@ import type {
   FintKlassemedlemskap,
   FintKontaktlarergruppemedlemskap,
   FintSchoolWithStudents,
+  FintSkole,
   FintUndervisningsgruppemedlemskap
 } from "../../src/types/fint/fint-school-with-students.js"
 
@@ -201,9 +202,19 @@ describe("repackPeriode", () => {
 })
 
 describe("sync-db-data/update-users-students-and-access", () => {
-  const faker = new Faker({
-    locale: [en, nb_NO]
-  })
+  const schools: MockFintSchool[] = [
+    {
+      name: "School 1",
+      schoolNumber: "33362297"
+    },
+    {
+      name: "School 2",
+      schoolNumber: "17616906"
+    }
+  ]
+
+  const predefinedSchoolStudents: FintSkole[] = getStaticMockFintSchools(schools)
+
   const mockConfig: GenerateMockFintSchoolsWithStudentsOptions = {
     minimumNumberOfStudentsWithBlockedAddress,
     numberOfKlasser: 5,
@@ -211,29 +222,37 @@ describe("sync-db-data/update-users-students-and-access", () => {
     numberOfUndervisningsgrupper: 5,
     numberOfTeachers: 5,
     numberOfStudents: 10,
-    schools: [
-      {
-        name: "School 1",
-        schoolNumber: faker.string.numeric(8)
-      },
-      {
-        name: "School 2",
-        schoolNumber: faker.string.numeric(8)
-      }
-    ]
+    predefinedSchoolStudents,
+    schools
   }
   const mockSchools: FintSchoolWithStudents[] = generateMockFintSchoolsWithStudents(mockConfig)
 
   writeFileSync("./tests/sync-db-data/mock-fint-schools.json", JSON.stringify(mockSchools, null, 2))
 
   describe("number of items in data is correct", () => {
-    it(`should be a minimum of ${minimumNumberOfStudentsWithBlockedAddress} number of students with blocked address`, () => {
+    it(`should be a minimum number of ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address`, () => {
       const numberOfStudentsWithBlockedAddress: number = getUniqueStudents(mockSchools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
       assert(
         numberOfStudentsWithBlockedAddress >= minimumNumberOfStudentsWithBlockedAddress,
         `Expected at least ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address, but found ${numberOfStudentsWithBlockedAddress}`
       )
     })
+
+    for (const predefinedStudent of mockConfig.predefinedSchoolStudents) {
+      assert.ok(Array.isArray(predefinedStudent.elevforhold), `predefinedSchoolStudents should have an array of elevforhold, but got ${typeof predefinedStudent.elevforhold}`)
+
+      for (let i: number = 0; i < predefinedStudent.elevforhold.length; i++) {
+        const predefinedStudentElevforhold: FintElevforhold | null = predefinedStudent.elevforhold[i]
+        assert.ok(predefinedStudentElevforhold !== null, `predefinedStudentElevforhold at index ${i} should not be null`)
+
+        it(`predefinedSchoolStudent with systemId ${predefinedStudentElevforhold.elev.systemId.identifikatorverdi} should be included in the generated mock data`, () => {
+          const found = mockSchools.some((school: FintSchoolWithStudents) =>
+            school.skole?.elevforhold?.some((ef: FintElevforhold | null) => ef?.systemId.identifikatorverdi === predefinedStudentElevforhold.systemId.identifikatorverdi)
+          )
+          assert.ok(found, `predefinedSchoolStudent with systemId ${predefinedStudentElevforhold.systemId.identifikatorverdi} was not found in the generated mock data`)
+        })
+      }
+    }
   })
 
   describe("data is mapped correctly when only given mockSchools", () => {
