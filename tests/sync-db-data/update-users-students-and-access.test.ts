@@ -239,17 +239,17 @@ describe("sync-db-data/update-users-students-and-access", () => {
     })
 
     for (const predefinedStudent of mockConfig.predefinedSchoolStudents) {
-      assert.ok(Array.isArray(predefinedStudent.elevforhold), `predefinedSchoolStudents should have an array of elevforhold, but got ${typeof predefinedStudent.elevforhold}`)
+      assert.ok(predefinedStudent.elevforhold, "predefinedSchoolStudents.elevforhold should be an array")
 
-      for (let i: number = 0; i < predefinedStudent.elevforhold.length; i++) {
+      for (let i = 0; i < predefinedStudent.elevforhold.length; i++) {
         const predefinedStudentElevforhold: FintElevforhold | null = predefinedStudent.elevforhold[i]
-        assert.ok(predefinedStudentElevforhold !== null, `predefinedStudentElevforhold at index ${i} should not be null`)
+        assert.ok(predefinedStudentElevforhold, `predefinedStudentElevforhold at index ${i} should not be null`)
 
-        it(`predefinedSchoolStudent with systemId ${predefinedStudentElevforhold.elev.systemId.identifikatorverdi} should be included in the generated mock data`, () => {
+        it(`predefinedSchoolStudent elevforhold with systemId ${predefinedStudentElevforhold.elev.systemId.identifikatorverdi} should be included in the generated mock data`, () => {
           const found = mockSchools.some((school: FintSchoolWithStudents) =>
             school.skole?.elevforhold?.some((ef: FintElevforhold | null) => ef?.systemId.identifikatorverdi === predefinedStudentElevforhold.systemId.identifikatorverdi)
           )
-          assert.ok(found, `predefinedSchoolStudent with systemId ${predefinedStudentElevforhold.systemId.identifikatorverdi} was not found in the generated mock data`)
+          assert.ok(found, `predefinedSchoolStudent elevforhold with systemId ${predefinedStudentElevforhold.systemId.identifikatorverdi} was not found in the generated mock data`)
         })
       }
     }
