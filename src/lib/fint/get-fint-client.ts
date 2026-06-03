@@ -6,22 +6,35 @@ import { FintClientV3 } from "./fint-client-v3.js"
 import { generateFintMockData } from "./generate-fint-mock-data.js"
 import { MockFintClient } from "./mock-fint-client.js"
 
+let fintClient: IFintClient | null = null
+
 export const getFintClient = (): IFintClient => {
+  if (fintClient) {
+    return fintClient
+  }
+
   if (!MOCK_FINT) {
     if (FINT_VERSION === "V3") {
-      return new FintClientV3()
+      fintClient = new FintClientV3()
+      return fintClient
     }
 
-    return new FintClient()
+    fintClient = new FintClient()
+    return fintClient
   }
 
   if (!MOCK_FINT_DATA_PATH) {
-    throw new Error("MOCK_FINT is set to true, but MOCK_FINT_DATA_PATH is not set to a valid .json file path")
+    throw new Error("MOCK_FINT is set to true, but MOCK_FINT_DATA_PATH is missing. must be set to a .json file path")
   }
 
   if (!existsSync(MOCK_FINT_DATA_PATH)) {
-    generateFintMockData()
+    try {
+      generateFintMockData()
+    } catch (error) {
+      throw new Error(`Failed to generate mock FINT data at '${MOCK_FINT_DATA_PATH}': ${(error as Error).message}`)
+    }
   }
 
-  return new MockFintClient()
+  fintClient = new MockFintClient()
+  return fintClient
 }
