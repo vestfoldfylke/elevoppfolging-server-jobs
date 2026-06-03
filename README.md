@@ -82,7 +82,7 @@ FINT_GENERATE_TYPES_MANUAL_KEY=""
 - **Generate V3 types**
   - Kjør `npm run generate-fint-types-v3`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
 
-#### get-encryption-keys
+#### get-and-create-if-not-exists-encryption-keys
 Gets (and creates if missing) a given number of data encryption keys (see script file)
 Must be run before initial startup of elevoppfølging web app for it to work.
 
