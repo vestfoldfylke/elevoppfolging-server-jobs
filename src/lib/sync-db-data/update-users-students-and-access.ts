@@ -173,7 +173,7 @@ export const updateUsersStudentsAndAccess = (
         logger.error("User from EntraID is missing crucial info, skipping user: {@User}", enterpriseApplicationUser)
         return
       }
-      // logger.info("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
+      // logger.debug("Døtter inn denne appuser kødden: {DisplayName}", enterpriseApplicationUser.displayName)
       appUser = {
         active: Boolean(enterpriseApplicationUser.accountEnabled),
         feideName: `${enterpriseApplicationUser.onPremisesSamAccountName}@${FEIDENAME_SUFFIX}`,
@@ -432,7 +432,7 @@ export const updateUsersStudentsAndAccess = (
         continue
       }
 
-      logger.info("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
+      logger.debug("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
 
       const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
       const studentEnrollment: StudentEnrollment = {
@@ -447,7 +447,7 @@ export const updateUsersStudentsAndAccess = (
       }
 
       // Går gjennom klassemedlemskap for å oppdatere lærer-tilganger - deretter kontaklærergruppemedlemskap og undervisningsgruppemedlemskap
-      logger.info("Oppdaterer lærer-tilganger for elev {StudentName}", elev.person.navn.fornavn)
+      logger.debug("Oppdaterer lærer-tilganger for elev {StudentName}", elev.person.navn.fornavn)
 
       for (const classMembership of studentEnrollment.classMemberships) {
         for (const teacher of classMembership.classGroup.teachers) {
@@ -593,7 +593,11 @@ export const updateUsersStudentsAndAccess = (
     })
 
     if (student.studentEnrollments.filter((enrollment) => enrollment.mainSchool).length > 1) {
-      logger.warn("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
+      if (MOCK_FINT) {
+        logger.debug("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
+      } else {
+        logger.warn("Fant flere enn ett elevforhold med mainSchool true for elev {StudentName} {FeideName} dette tror vi at ikke skal skje!", student.name, student.feideName)
+      }
     }
   })
 
