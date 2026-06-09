@@ -30,13 +30,13 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
-    "@graphql-codegen/cli": "^7.0.0",
-    "@graphql-codegen/typescript": "^6.0.1",
-    "@graphql-codegen/typescript-operations": "^6.0.2",
+    "@graphql-codegen/cli": "^7.1.2",
+    "@graphql-codegen/typescript": "^6.0.2",
+    "@graphql-codegen/typescript-operations": "^6.0.3",
     "@microsoft/microsoft-graph-types": "^2.43.1",
     "@types/node": "^25.9.1",
     "mongodb-client-encryption": "^7.0.0",
-    "tsx": "^4.22.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }
