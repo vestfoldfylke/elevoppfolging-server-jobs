@@ -136,6 +136,11 @@ export class MockDbClient implements IDbClient {
     console.log("Email alert updated successfully in mock db")
   }
 
+  async ensureIndexes(): Promise<void> {
+    console.log("Mock ensureIndexes - simply returning")
+    return Promise.resolve()
+  }
+
   private fillEmailAlertsDb(): void {
     const totalNumOfEmailAlerts: number = Math.floor(Math.random() * 25)
     console.log("Filling mock db email alerts with", totalNumOfEmailAlerts, "email alerts")

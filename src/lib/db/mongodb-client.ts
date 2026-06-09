@@ -2,7 +2,23 @@ import { logger } from "@vestfoldfylke/loglady"
 import { type Binary, type Db, type Document, ObjectId, type OptionalUnlessRequiredId } from "mongodb"
 import { MONGODB } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
-import type { DbAccess, DbAppStudent, DbAppUser, DbEmailAlert, DbEncryptedAppStudent, DbSchool, NewAppStudent, NewAppUser, NewDbAccess, NewSchool } from "../../types/db/shared-types.js"
+import type {
+  DbAccess,
+  DbAppStudent,
+  DbAppUser,
+  DbEmailAlert,
+  DbEncryptedAppStudent,
+  DbGroupDocument,
+  DbGroupImportantStuff,
+  DbSchool,
+  DbStudentDataSharingConsent,
+  DbStudentDocument,
+  DbStudentImportantStuff,
+  NewAppStudent,
+  NewAppUser,
+  NewDbAccess,
+  NewSchool
+} from "../../types/db/shared-types.js"
 
 export class MongoDbClient implements IDbClient {
   private readonly db: Db
@@ -157,6 +173,57 @@ export class MongoDbClient implements IDbClient {
       throw error
     }
   }
-}
 
-/* Manuelle elever - de kommer ikke fra FINT. Så hvis vi wiper, må vi lagre dem et sted */
+  async ensureIndexes(): Promise<void> {
+    try {
+      await this.db.collection<DbStudentImportantStuff | DbGroupImportantStuff>(MONGODB.COLLECTIONS.IMPORTANT_STUFF).createIndexes([
+        {
+          key: { "student._id": 1, "school.schoolNumber": 1 },
+          name: "idx_student_school",
+          partialFilterExpression: { "student._id": { $exists: true } },
+          unique: true
+        },
+        {
+          key: { "group.systemId": 1, "school.schoolNumber": 1 },
+          name: "idx_group_school_unique",
+          partialFilterExpression: { "group.systemId": { $exists: true } },
+          unique: true
+        }
+      ])
+    } catch (error) {
+      logger.errorException(error, "Error ensuring indexes on ImportantStuff collection")
+      throw error
+    }
+
+    try {
+      await this.db.collection<DbStudentDocument | DbGroupDocument>(MONGODB.COLLECTIONS.DOCUMENTS).createIndexes([
+        { key: { "student._id": 1, "school.schoolNumber": 1, documentAccess: 1 }, name: "idx_student_school_access", partialFilterExpression: { "student._id": { $exists: true } } },
+        { key: { "template._id": 1 }, name: "idx_template" }
+      ])
+    } catch (error) {
+      logger.errorException(error, "Error ensuring indexes on Documents collection")
+      throw error
+    }
+
+    try {
+      await this.db.collection<DbStudentDataSharingConsent>(MONGODB.COLLECTIONS.STUDENT_DATA_SHARING_CONSENT).createIndex({ "student._id": 1 }, { name: "idx_student", unique: true })
+    } catch (error) {
+      logger.errorException(error, "Error ensuring indexes on Consent collection")
+      throw error
+    }
+
+    try {
+      await this.db.collection<DbAppUser>(MONGODB.COLLECTIONS.USERS).createIndex({ "entra.id": 1 }, { name: "idx_entraId", unique: true })
+    } catch (error) {
+      logger.errorException(error, "Error ensuring indexes on Users collection")
+      throw error
+    }
+
+    try {
+      await this.db.collection<DbSchool>(MONGODB.COLLECTIONS.SCHOOLS).createIndex({ schoolNumber: 1 }, { name: "idx_schoolNumber", unique: true })
+    } catch (error) {
+      logger.errorException(error, "Error ensuring indexes on Schools collection")
+      throw error
+    }
+  }
+}
