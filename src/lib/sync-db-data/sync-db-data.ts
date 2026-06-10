@@ -97,5 +97,8 @@ export const syncDbData = async (): Promise<void> => {
   await dbClient.replaceSchools(updatedData.updatedSchools)
   logger.info("Updated schools records in database")
 
+  await dbClient.ensureIndexes()
+  logger.info("Ensured indexes in database")
+
   logger.info("Sync completed successfully")
 }

@@ -14,6 +14,8 @@ Elevoppfølging server side jobs
 - Før vi oppdaterer elever basert på FINT-data wiper vi alle AUTOMATISKE elevforhold (altså de som kommer fra FINT), men vi beholder manuelle elevforhold (som er opprettet av brukere i APP'en, rådgivere eller no)
 - Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT 
 - Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
+- Replacer collections med de nye dataene (users, students, access, schools)
+- Sikrer at indeksering er satt på collections
 
 requires following values in `./local.settings.json`
 

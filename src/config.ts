@@ -24,9 +24,11 @@ export const MONGODB = {
   DB_NAME: process.env.MONGODB_DB_NAME || "elevoppfolging",
   COLLECTIONS: {
     STUDENTS: "students",
+    IMPORTANT_STUFF: "important-stuff",
     USERS: "users",
     ACCESS: "access",
     DOCUMENTS: "documents",
+    STUDENT_DATA_SHARING_CONSENT: "student-data-sharing-consents",
     SCHOOLS: "schools",
     EMAIL_ALERTS: "email-alerts"
   }
