@@ -2,10 +2,9 @@ import assert from "node:assert"
 import { writeFileSync } from "node:fs"
 import { describe, it } from "node:test"
 import { ObjectId } from "mongodb"
-import { FINT_ADDRESS_BLOCK } from "../../src/config.js"
 import { getEntraClient } from "../../src/lib/entra/get-entra-client.js"
 import { generateMockFintSchoolsWithStudents } from "../../src/lib/fint/generate-fint-mock-schools-with-students.js"
-import { getUniqueStudents } from "../../src/lib/fint/utils.js"
+import { getUniqueStudents, hasStudentBlockedAddress } from "../../src/lib/fint/utils.js"
 import { repackPeriode, updateUsersStudentsAndAccess } from "../../src/lib/sync-db-data/update-users-students-and-access.js"
 import { getStaticMockFintSchools } from "../../src/mock-data/static-mock-fint-schools.js"
 import type { DbAccess, DbAppStudent, DbAppUser, DbSchool, EditorData, NewAppUser, NewDbAccess, NewSchool, SchoolInfo } from "../../src/types/db/shared-types.js"
@@ -231,7 +230,7 @@ describe("sync-db-data/update-users-students-and-access", () => {
 
   describe("number of items in data is correct", () => {
     it(`should be a minimum number of ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address`, () => {
-      const numberOfStudentsWithBlockedAddress: number = getUniqueStudents(mockSchools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
+      const numberOfStudentsWithBlockedAddress: number = getUniqueStudents(mockSchools, hasStudentBlockedAddress).length
       assert(
         numberOfStudentsWithBlockedAddress >= minimumNumberOfStudentsWithBlockedAddress,
         `Expected at least ${minimumNumberOfStudentsWithBlockedAddress} students with blocked address, but found ${numberOfStudentsWithBlockedAddress}`

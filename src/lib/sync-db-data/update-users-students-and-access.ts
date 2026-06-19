@@ -1,7 +1,7 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
 import { BSON, type Document, ObjectId } from "mongodb"
-import { APP_NAME, FEIDENAME_SUFFIX, FINT_ADDRESS_BLOCK, MOCK_FINT } from "../../config.js"
+import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
   ClassMembership,
@@ -34,6 +34,7 @@ import type {
   FintUndervisningsforhold,
   FintUndervisningsgruppemedlemskap
 } from "../../types/fint/fint-school-with-students.js"
+import { hasStudentBlockedAddress } from "../fint/utils.js"
 
 export type StupidMaybeArray<T> = Array<T | null> | null | undefined
 
@@ -71,8 +72,6 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
 const cloneDbDocument = <T extends Document>(doc: T): T => {
   return BSON.deserialize(BSON.serialize(doc)) as T
 }
-
-const hasElevBlockedAddress = (elev: FintElev): boolean => elev.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK) || false
 
 export const updateUsersStudentsAndAccess = (
   currentAppUsers: DbAppUser[],
@@ -434,7 +433,7 @@ export const updateUsersStudentsAndAccess = (
 
       logger.debug("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
 
-      const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
+      const hasBlockedAddress: boolean = hasStudentBlockedAddress(elev)
       const studentEnrollment: StudentEnrollment = {
         systemId: elevforhold.systemId.identifikatorverdi,
         classMemberships: repackClassMemberships(elevforhold.klassemedlemskap, elev),
@@ -502,7 +501,7 @@ export const updateUsersStudentsAndAccess = (
           created: editorData,
           modified: editorData,
           source: "AUTO",
-          hasBlockedAddress: hasStudentBlockedAddress
+          hasBlockedAddress
         }
         updatedStudents.push(currentStudent)
       } else {
@@ -518,7 +517,7 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
-        currentStudent.hasBlockedAddress = hasStudentBlockedAddress
+        currentStudent.hasBlockedAddress = hasBlockedAddress
       }
 
       currentStudent.studentEnrollments.push(studentEnrollment)
