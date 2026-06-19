@@ -25,16 +25,16 @@
     "@azure/functions": "^4.16.0",
     "@azure/identity": "^4.13.1",
     "@faker-js/faker": "^10.4.0",
-    "@vestfoldfylke/loglady": "^2.0.0",
-    "mongodb": "^7.2.0"
+    "@vestfoldfylke/loglady": "^2.1.0",
+    "mongodb": "^7.3.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.15",
+    "@biomejs/biome": "2.4.16",
     "@graphql-codegen/cli": "^7.1.2",
     "@graphql-codegen/typescript": "^6.0.2",
     "@graphql-codegen/typescript-operations": "^6.0.3",
     "@microsoft/microsoft-graph-types": "^2.43.1",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "mongodb-client-encryption": "^7.0.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
