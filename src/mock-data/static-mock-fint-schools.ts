@@ -32,7 +32,7 @@ const staticElevforhold: StaticElevforhold[] = [
               etternavn: "Snorkelberg"
             },
             fodselsnummer: {
-              identifikatorverdi: "123456789012"
+              identifikatorverdi: "12345678901"
             }
           }
         },
@@ -187,7 +187,7 @@ const staticElevforhold: StaticElevforhold[] = [
               etternavn: "Bananbukse"
             },
             fodselsnummer: {
-              identifikatorverdi: "234567890123"
+              identifikatorverdi: "23456789012"
             }
           }
         },
