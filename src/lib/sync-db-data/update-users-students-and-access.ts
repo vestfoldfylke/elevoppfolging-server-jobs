@@ -39,20 +39,21 @@ import { hasStudentBlockedAddress } from "../fint/utils.js"
 export type StupidMaybeArray<T> = Array<T | null> | null | undefined
 
 const getValidGraphQlArray = <T, U>(input: StupidMaybeArray<T>, typeName: string, elevOrMessage: FintElev | string): U => {
-  if (input === null || input === undefined) {
-    if (typeof elevOrMessage === "string") {
-      logger.warn("Melding: {Message}. Ressursen har ingen {Type}", elevOrMessage, typeName)
-    } else {
-      logger.warn(
-        "Person med brukernavn {Username} har ingen {Type}",
-        elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
-        typeName
-      )
-    }
+  if (input !== null && input !== undefined) {
+    return input.filter((item: T | null) => item !== null) as U
+  }
+
+  if (typeof elevOrMessage === "string") {
+    logger.warn("Melding: {Message}. Ressursen har ingen {Type}", elevOrMessage, typeName)
     return [] as U
   }
 
-  return input.filter((item: T | null) => item !== null) as U
+  logger.warn(
+    "Person med brukernavn {Username} har ingen {Type}",
+    elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
+    typeName
+  )
+  return [] as U
 }
 
 export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined): Period => {
@@ -541,7 +542,7 @@ export const updateUsersStudentsAndAccess = (
       return
     }
 
-    // Set manual enrollments to expire if there is at least one AUTO enrollment for the same school, and set mainSchool to false on manual enrollments if there is an auto enrollment for any school with mainschool true
+    // Set manual enrollments to expire if there is at least one AUTO enrollment for the same school, and set mainSchool to false on manual enrollments if there is an auto enrollment for any school with mainSchool true
     const existingAutoEnrollmentSchools = student.studentEnrollments
       .filter((enrollment) => enrollment.source === "AUTO")
       .map((enrollment) => {
