@@ -1,16 +1,15 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
-import { FINT_ADDRESS_BLOCK } from "../../config.js"
 import type { IDbClient } from "../../types/db/db-client.js"
 import type { DbAppStudent, NewAppStudent } from "../../types/db/shared-types.js"
 import type { IEntraClient } from "../../types/entra/entra-client.js"
 import type { IFintClient } from "../../types/fint/fint-client.js"
 import type { FintSkoleInfo } from "../../types/fint/fint-school.js"
-import type { FintElev, FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
+import type { FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
 import { getDbClient } from "../db/get-db-client.js"
 import { getEntraClient } from "../entra/get-entra-client.js"
 import { getFintClient } from "../fint/get-fint-client.js"
-import { getUniqueStudents } from "../fint/utils.js"
+import { getUniqueStudents, hasStudentBlockedAddress } from "../fint/utils.js"
 import { updateUsersStudentsAndAccess } from "./update-users-students-and-access.js"
 
 const fintClient: IFintClient = getFintClient()
@@ -74,7 +73,7 @@ export const syncDbData = async (): Promise<void> => {
   const dbSchools = await dbClient.getSchools()
   logger.info("Fetched {DbSchoolCount} schools records from database", dbSchools.length)
 
-  const numberOfStudentsWithAddressBlockInFint: number = getUniqueStudents(schoolsWithStudents, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)).length
+  const numberOfStudentsWithAddressBlockInFint: number = getUniqueStudents(schoolsWithStudents, hasStudentBlockedAddress).length
   logger.warn("There are currently {StudentsWithAddressBlockInFintCount} students with address block fetched from FINT", numberOfStudentsWithAddressBlockInFint)
 
   logger.info("Syncing users and students...")

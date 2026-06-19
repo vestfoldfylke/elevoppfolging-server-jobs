@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols - Noe er brukt her, mesteparten er brukt i elevoppfolging
+
 import type { Binary, ObjectId } from "mongodb"
 
 /** Undervisningsforhold & Skoleressurs */
@@ -428,7 +430,7 @@ export type DocumentBase = {
   modified: EditorData
 }
 
-export type DocumentAccess = "ALL_WITH_STUDENT_ACCESS" | "EXCLUDE_SUBJECT_TEACHERS"
+export type DocumentAccess = "ALL_WITH_STUDENT_ACCESS" | "EXCLUDE_SUBJECT_TEACHERS" | "ONLY_CREATOR"
 
 export type DocumentInput = {
   school: SchoolInfo
@@ -806,6 +808,7 @@ export type AuditEntryInput = {
     | "Student"
     | "StudentDocument"
     | "StudentDocumentMessage"
+    | "StudentEnrollment"
     | "ImportantStuff"
     | "StudentDataSharingConsent"
     | "GroupDocument"

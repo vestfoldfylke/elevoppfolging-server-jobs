@@ -1,3 +1,4 @@
+import { FINT_ADDRESS_BLOCK } from "../../config.js"
 import type { FintElev, FintElevforhold, FintSchoolWithStudents } from "../../types/fint/fint-school-with-students.js"
 
 export const getUniqueStudents = (schools: FintSchoolWithStudents[], studentFunction: (student: FintElev) => boolean | undefined): FintElev[] => {
@@ -17,3 +18,5 @@ export const getUniqueStudents = (schools: FintSchoolWithStudents[], studentFunc
 
   return Array.from(uniqueStudents.values())
 }
+
+export const hasStudentBlockedAddress = (student: FintElev): boolean => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK) || false

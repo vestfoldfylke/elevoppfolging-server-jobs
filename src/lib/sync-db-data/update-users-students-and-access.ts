@@ -1,7 +1,7 @@
 import type { User } from "@microsoft/microsoft-graph-types"
 import { logger } from "@vestfoldfylke/loglady"
 import { BSON, type Document, ObjectId } from "mongodb"
-import { APP_NAME, FEIDENAME_SUFFIX, FINT_ADDRESS_BLOCK, MOCK_FINT } from "../../config.js"
+import { APP_NAME, FEIDENAME_SUFFIX, MOCK_FINT } from "../../config.js"
 import type {
   ClassAutoAccessEntry,
   ClassMembership,
@@ -34,24 +34,26 @@ import type {
   FintUndervisningsforhold,
   FintUndervisningsgruppemedlemskap
 } from "../../types/fint/fint-school-with-students.js"
+import { hasStudentBlockedAddress } from "../fint/utils.js"
 
 export type StupidMaybeArray<T> = Array<T | null> | null | undefined
 
 const getValidGraphQlArray = <T, U>(input: StupidMaybeArray<T>, typeName: string, elevOrMessage: FintElev | string): U => {
-  if (input === null || input === undefined) {
-    if (typeof elevOrMessage === "string") {
-      logger.warn("Melding: {Message}. Ressursen har ingen {Type}", elevOrMessage, typeName)
-    } else {
-      logger.warn(
-        "Person med brukernavn {Username} har ingen {Type}",
-        elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
-        typeName
-      )
-    }
+  if (input !== null && input !== undefined) {
+    return input.filter((item: T | null) => item !== null) as U
+  }
+
+  if (typeof elevOrMessage === "string") {
+    logger.warn("Melding: {Message}. Ressursen har ingen {Type}", elevOrMessage, typeName)
     return [] as U
   }
 
-  return input.filter((item: T | null) => item !== null) as U
+  logger.warn(
+    "Person med brukernavn {Username} har ingen {Type}",
+    elevOrMessage.feidenavn?.identifikatorverdi || elevOrMessage.elevnummer?.identifikatorverdi || `${elevOrMessage.person.navn.fornavn} ${elevOrMessage.person.navn.etternavn}`,
+    typeName
+  )
+  return [] as U
 }
 
 export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined): Period => {
@@ -71,8 +73,6 @@ export const repackPeriode = (periode: FintGyldighetsPeriode | null | undefined)
 const cloneDbDocument = <T extends Document>(doc: T): T => {
   return BSON.deserialize(BSON.serialize(doc)) as T
 }
-
-const hasElevBlockedAddress = (elev: FintElev): boolean => elev.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK) || false
 
 export const updateUsersStudentsAndAccess = (
   currentAppUsers: DbAppUser[],
@@ -434,7 +434,7 @@ export const updateUsersStudentsAndAccess = (
 
       logger.debug("Døtter inn denne elevkødden: {DisplayName}", elev.person.navn.fornavn)
 
-      const hasStudentBlockedAddress: boolean = hasElevBlockedAddress(elev)
+      const hasBlockedAddress: boolean = hasStudentBlockedAddress(elev)
       const studentEnrollment: StudentEnrollment = {
         systemId: elevforhold.systemId.identifikatorverdi,
         classMemberships: repackClassMemberships(elevforhold.klassemedlemskap, elev),
@@ -502,7 +502,7 @@ export const updateUsersStudentsAndAccess = (
           created: editorData,
           modified: editorData,
           source: "AUTO",
-          hasBlockedAddress: hasStudentBlockedAddress
+          hasBlockedAddress
         }
         updatedStudents.push(currentStudent)
       } else {
@@ -518,7 +518,7 @@ export const updateUsersStudentsAndAccess = (
         // Add some props if missing
         currentStudent.created ??= editorData
         currentStudent.studentEnrollments ??= []
-        currentStudent.hasBlockedAddress = hasStudentBlockedAddress
+        currentStudent.hasBlockedAddress = hasBlockedAddress
       }
 
       currentStudent.studentEnrollments.push(studentEnrollment)
@@ -542,7 +542,7 @@ export const updateUsersStudentsAndAccess = (
       return
     }
 
-    // Set manual enrollments to expire if there is at least one AUTO enrollment for the same school, and set mainSchool to false on manual enrollments if there is an auto enrollment for any school with mainschool true
+    // Set manual enrollments to expire if there is at least one AUTO enrollment for the same school, and set mainSchool to false on manual enrollments if there is an auto enrollment for any school with mainSchool true
     const existingAutoEnrollmentSchools = student.studentEnrollments
       .filter((enrollment) => enrollment.source === "AUTO")
       .map((enrollment) => {

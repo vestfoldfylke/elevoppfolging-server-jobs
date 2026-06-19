@@ -13,7 +13,7 @@ import type {
   FintUndervisningsgruppe
 } from "../../types/fint/fint-school-with-students.js"
 import { norwegianFaker } from "../norwegian-faker.js"
-import { getUniqueStudents } from "./utils.js"
+import { getUniqueStudents, hasStudentBlockedAddress } from "./utils.js"
 
 const validPeriod: FintGyldighetsPeriode = {
   start: "2022-08-15T00:00:00Z",
@@ -410,7 +410,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
     }
   }
 
-  let studentsWithAddressBlock: FintElev[] = getUniqueStudents(schools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK))
+  let studentsWithAddressBlock: FintElev[] = getUniqueStudents(schools, hasStudentBlockedAddress)
 
   if (studentsWithAddressBlock.length < config.minimumNumberOfStudentsWithBlockedAddress) {
     for (let i: number = 0; i < config.minimumNumberOfStudentsWithBlockedAddress - studentsWithAddressBlock.length; i++) {
@@ -418,7 +418,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
         norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })
       ]?.elev as FintElev
 
-      while (!randomStudent || randomStudent.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK)) {
+      while (!randomStudent || hasStudentBlockedAddress(randomStudent)) {
         randomStudent = schools[norwegianFaker.number.int({ min: 0, max: schools.length - 1 })].skole?.elevforhold?.[norwegianFaker.number.int({ min: 0, max: config.numberOfStudents - 1 })]
           ?.elev as FintElev
       }
@@ -428,7 +428,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
       }
     }
 
-    studentsWithAddressBlock = getUniqueStudents(schools, (student: FintElev) => student.person.bostedsadresse?.adresselinje?.includes(FINT_ADDRESS_BLOCK))
+    studentsWithAddressBlock = getUniqueStudents(schools, hasStudentBlockedAddress)
   }
 
   const numberOfStudentsWithNoAddress: number = getUniqueStudents(schools, (elev: FintElev) => elev.person.bostedsadresse === null).length
