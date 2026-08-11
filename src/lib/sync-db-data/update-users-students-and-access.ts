@@ -428,7 +428,8 @@ export const updateUsersStudentsAndAccess = (
       }
 
       if (!elev.feidenavn?.identifikatorverdi) {
-        logger.error("Elev {DisplayName} har ingen feidenavn, hopper over", elev.person.navn.fornavn)
+        // NOTE: This happens between school years, when new students are showing up in FINT, but IDM isn't running yet so they haven't got a feidenavn yet
+        logger.warn("Elev {DisplayName} har ingen feidenavn, hopper over", elev.person.navn.fornavn)
         continue
       }
 
