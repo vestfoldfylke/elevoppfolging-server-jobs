@@ -22,21 +22,21 @@
     "rewrap-encryption-keys": "node --env-file=.env --import tsx ./scripts/rewrap-encryption-keys.ts"
   },
   "dependencies": {
-    "@azure/functions": "^4.16.0",
+    "@azure/functions": "^4.16.2",
     "@azure/identity": "^4.13.1",
-    "@faker-js/faker": "^10.4.0",
+    "@faker-js/faker": "^10.5.0",
     "@vestfoldfylke/loglady": "^2.1.0",
-    "mongodb": "^7.3.0"
+    "mongodb": "^7.5.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
-    "@graphql-codegen/cli": "^7.1.2",
-    "@graphql-codegen/typescript": "^6.0.2",
-    "@graphql-codegen/typescript-operations": "^6.0.3",
+    "@biomejs/biome": "2.5.8",
+    "@graphql-codegen/cli": "^7.2.0",
+    "@graphql-codegen/typescript": "^6.1.0",
+    "@graphql-codegen/typescript-operations": "^6.1.2",
     "@microsoft/microsoft-graph-types": "^2.43.1",
-    "@types/node": "^25.9.3",
-    "mongodb-client-encryption": "^7.0.0",
-    "tsx": "^4.22.4",
+    "@types/node": "^26.1.2",
+    "mongodb-client-encryption": "^7.2.1",
+    "tsx": "^4.23.5",
     "typescript": "^6.0.3"
   }
 }
