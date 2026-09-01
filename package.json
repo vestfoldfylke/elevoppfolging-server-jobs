@@ -12,7 +12,7 @@
     "safe-post-install": "npm rebuild mongodb-client-encryption",
     "watch": "tsc -w",
     "start": "npm run build && func start",
-    "node:test": "MOCK_FINT=true MOCK_ENTRA=true MOCK_FINT_DATA_PATH=samma-driten.json  node --import tsx --test tests/**/*.test.ts",
+    "node:test": "MOCK_FINT=true MOCK_ENTRA=true MOCK_FINT_DATA_PATH=samma-driten.json  node --import tsx --test \"tests/**/*.test.ts\"",
     "test": "tsc --noEmit && biome check && npm run node:test",
     "lint": "npx @biomejs/biome check",
     "lint:fix": "npx @biomejs/biome check --write",
