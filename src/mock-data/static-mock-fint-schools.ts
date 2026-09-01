@@ -1,4 +1,4 @@
-import { FINT_ADDRESS_BLOCK } from "../config.js"
+import { FINT_ADDRESS_BLOCK_ADDRESSES } from "../config.js"
 import type { MockFintSchool } from "../types/fint/fint-mock.js"
 import type { FintElevforhold, FintSkole } from "../types/fint/fint-school-with-students.js"
 
@@ -6,6 +6,8 @@ type StaticElevforhold = {
   skolenummer: string
   elevforhold: Array<FintElevforhold | null>
 }
+
+const blockedAddress: string = FINT_ADDRESS_BLOCK_ADDRESSES[0]
 
 const staticElevforhold: StaticElevforhold[] = [
   {
@@ -179,7 +181,7 @@ const staticElevforhold: StaticElevforhold[] = [
           },
           person: {
             bostedsadresse: {
-              adresselinje: [FINT_ADDRESS_BLOCK]
+              adresselinje: [blockedAddress]
             },
             navn: {
               fornavn: "A-DEMO",

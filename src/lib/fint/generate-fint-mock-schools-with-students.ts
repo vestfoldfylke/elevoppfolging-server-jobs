@@ -1,5 +1,5 @@
 import { logger } from "@vestfoldfylke/loglady"
-import { FINT_ADDRESS_BLOCK } from "../../config.js"
+import { FINT_ADDRESS_BLOCK_ADDRESSES } from "../../config.js"
 import type { GenerateMockFintSchoolsWithStudentsOptions, MockFintSchool } from "../../types/fint/fint-mock.js"
 import type {
   FintElev,
@@ -57,13 +57,18 @@ const generateUniqueName = (): UniqueName => {
   return { firstName, lastName, feidePrefix }
 }
 
+const getRandomBlockedAddress = (): string => {
+  const randomBlockedAddressNumber: number = Math.floor(Math.random() * FINT_ADDRESS_BLOCK_ADDRESSES.length)
+  return FINT_ADDRESS_BLOCK_ADDRESSES[randomBlockedAddressNumber]
+}
+
 const generateAddress = (): { adresselinje: Array<string | null> } | null => {
   const randomNumber: number = norwegianFaker.number.int({ max: 1000 })
 
   // student with blocked address
   if ([42, 69, 666, 777].includes(randomNumber)) {
     return {
-      adresselinje: [FINT_ADDRESS_BLOCK]
+      adresselinje: [getRandomBlockedAddress()]
     }
   }
 
@@ -424,7 +429,7 @@ export const generateMockFintSchoolsWithStudents = (config: GenerateMockFintScho
       }
 
       randomStudent.person.bostedsadresse = {
-        adresselinje: [FINT_ADDRESS_BLOCK]
+        adresselinje: [getRandomBlockedAddress()]
       }
     }
 
