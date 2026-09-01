@@ -82,7 +82,7 @@ export const getFintConfig = (): FintConfig => {
   }
 }
 
-export const FINT_ADDRESS_BLOCK: string = process.env.FINT_ADDRESS_BLOCK || "SPERRET ADRESSE"
+export const FINT_ADDRESS_BLOCK_ADDRESSES: string[] = (process.env.FINT_ADDRESS_BLOCK || "FORTROLIG ADRESSE,STRENGT FORTROLIG ADRESSE").split(",")
 
 export const getSmtpConfig = (): SmtpConfig => {
   const baseUrl: string | undefined = process.env.SMTP_BASE_URL
