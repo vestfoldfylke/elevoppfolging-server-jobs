@@ -124,3 +124,15 @@ MONGODB_DB_NAME="<db-name>"
 3. Run script and pray
 4. If all good, disable the old master key in key-vault.
 5. If not good, pray more
+
+#### get-document-count-per-template
+Gets all documents, all templates and counts the template usage. Outputs the sorted result to `./usage/document-count-per-template.json`
+
+requires following values in `./.env`
+
+```bash
+MONGODB_CONNECTION_STRING="<connection-string>"
+MONGODB_DB_NAME="<db-name>"
+MONGODB_DOCUMENTS_COLLECTION_NAME="<collection-name>"
+MONGODB_TEMPLATES_COLLECTION_NAME="<collection-name>"
+```
