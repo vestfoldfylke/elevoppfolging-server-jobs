@@ -116,3 +116,6 @@ debug-db/*.json
 
 # Mock fint dir
 mock-data/*.json
+
+# Usage directory used by scripts/get-document-count-per-template.ts
+usage

@@ -19,7 +19,8 @@
     "generate-fint-types": "node --env-file=.env node_modules/.bin/graphql-codegen --config codegen.ts",
     "generate-fint-types-v3": "node --env-file=.env node_modules/.bin/graphql-codegen --config codegen-v3.ts",
     "get-and-create-if-not-exists-encryption-keys": "node --env-file=.env --import tsx ./scripts/get-and-create-if-not-exists-encryption-keys.ts",
-    "rewrap-encryption-keys": "node --env-file=.env --import tsx ./scripts/rewrap-encryption-keys.ts"
+    "rewrap-encryption-keys": "node --env-file=.env --import tsx ./scripts/rewrap-encryption-keys.ts",
+    "get-document-count-per-template": "node --env-file=.env --import tsx ./scripts/get-document-count-per-template.ts"
   },
   "dependencies": {
     "@azure/functions": "^4.16.2",
