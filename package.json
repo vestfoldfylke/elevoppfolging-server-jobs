@@ -23,11 +23,11 @@
     "get-document-count-per-template": "node --env-file=.env --import tsx ./scripts/get-document-count-per-template.ts"
   },
   "dependencies": {
-    "@azure/functions": "^4.16.2",
-    "@azure/identity": "^4.13.1",
-    "@faker-js/faker": "^10.5.0",
+    "@azure/functions": "^4.16.5",
+    "@azure/identity": "^4.13.3",
+    "@faker-js/faker": "^10.6.0",
     "@vestfoldfylke/loglady": "^2.1.0",
-    "mongodb": "^7.5.0"
+    "mongodb": "^7.7.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.8",
