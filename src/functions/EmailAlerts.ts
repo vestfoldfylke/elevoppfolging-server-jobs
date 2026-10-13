@@ -1,7 +1,8 @@
 import { app, type InvocationContext, type Timer } from "@azure/functions"
-import { logger } from "@vestfoldfylke/loglady"
+import { type LogConfig, logger } from "@vestfoldfylke/loglady"
 import { getDbClient } from "../lib/db/get-db-client.js"
 import { getSmtpClient } from "../lib/smtp/get-smtp-client.js"
+import { runInContext } from "../middleware/async-local-context.js"
 import type { IDbClient } from "../types/db/db-client.js"
 import type { DbEmailAlert } from "../types/db/shared-types.js"
 import type { ISmtpClient, SmtpSendResponse } from "../types/smtp/smtp-client.js"
@@ -16,9 +17,11 @@ export async function EmailAlerts(_myTimer: Timer, _context: InvocationContext):
   logger.info("{EmailAlertCount} EmailAlerts to handle found", emailAlerts.length)
 
   for (const emailAlert of emailAlerts) {
-    try {
-      await handleEmailAlert(emailAlert)
-    } catch {}
+    const logContext: LogConfig = {
+      prefix: emailAlert._id.toString()
+    }
+
+    await runInContext<void>(logContext, async (): Promise<void> => await handleEmailAlert(emailAlert))
   }
 }
 
@@ -28,24 +31,26 @@ const handleEmailAlert = async (emailAlert: DbEmailAlert): Promise<void> => {
     return
   }
 
-  const smtpResponses: SmtpSendResponse = await smtpClient.sendEmail(emailAlert.receivers, emailAlert.alertBody)
-  const smtpResponseEntries: [string, string][] = Object.entries(smtpResponses)
+  try {
+    const smtpResponses: SmtpSendResponse = await smtpClient.sendEmail(emailAlert.receivers, emailAlert.alertBody)
+    const smtpResponseEntries: [string, string][] = Object.entries(smtpResponses)
 
-  for (const emailAlertReceiver of emailAlert.receivers) {
-    const messageId: string | undefined = smtpResponseEntries.find((entry: [string, string]) => entry[1] === emailAlertReceiver.receiver)?.[0]
-    if (!messageId) {
-      logger.error("SMTP response for receiver {AlertReceiver} does not exist 😱", emailAlertReceiver.receiver)
-      emailAlertReceiver.status = "FAILED"
+    for (const emailAlertReceiver of emailAlert.receivers) {
+      const messageId: string | undefined = smtpResponseEntries.find((entry: [string, string]) => entry[1] === emailAlertReceiver.receiver)?.[0]
+      if (!messageId) {
+        logger.error("SMTP response for receiver {AlertReceiver} does not exist 😱", emailAlertReceiver.receiver)
+        emailAlertReceiver.status = "FAILED"
 
-      continue
+        continue
+      }
+
+      emailAlertReceiver.status = "SENT"
+      emailAlertReceiver.messageId = messageId
     }
 
-    emailAlertReceiver.status = "SENT"
-    emailAlertReceiver.messageId = messageId
-  }
-
-  emailAlert.status = "SENT"
-  await dbClient.updateEmailAlert(emailAlert)
+    emailAlert.status = "SENT"
+    await dbClient.updateEmailAlert(emailAlert)
+  } catch {}
 }
 
 app.timer("EmailAlerts", {
