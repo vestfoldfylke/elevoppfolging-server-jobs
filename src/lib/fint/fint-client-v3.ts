@@ -83,7 +83,17 @@ export class FintClientV3 implements IFintClient {
     const graphqlResponse: FintGraphQlResponse<T> = await response.json()
 
     if (graphqlResponse.errors) {
-      logger.error("{ErrorCount} errors occured when calling FINT {FintVersion} graphql endpoint", graphqlResponse.errors.length, authOptions.VERSION)
+      if (graphqlResponse.errors.length <= 10) {
+        logger.error(
+          "{ErrorCount} errors occured when calling FINT {FintVersion} graphql endpoint. GraphQlErrors: {@GraphQlErrors}",
+          graphqlResponse.errors.length,
+          authOptions.VERSION,
+          graphqlResponse.errors
+        )
+      } else {
+        logger.error("{ErrorCount} errors occured when calling FINT {FintVersion} graphql endpoint", graphqlResponse.errors.length, authOptions.VERSION)
+      }
+
       throw new Error(`${graphqlResponse.errors.length} errors occured when calling FINT ${authOptions.VERSION} graphql endpoint`)
     }
 
