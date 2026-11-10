@@ -14,5 +14,6 @@ jobs:
     with:
       azure_appname: "vfkplzminelevelodemosj"
       azure_functionapp_package_path: "."
+      audit_severity: "high"
     secrets:
       azure_publishprofile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DEMO }}
