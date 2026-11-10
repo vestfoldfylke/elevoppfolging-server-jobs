@@ -68,7 +68,7 @@ export class FintClient implements IFintClient {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        ContentType: "application/json"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     })
