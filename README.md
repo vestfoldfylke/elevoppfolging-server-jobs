@@ -1,7 +1,9 @@
 # elevoppfolging-server-jobs
+
 Elevoppfølging server side jobs
 
 ## Brukersynkronisering
+
 - Henter alle elevene fra FINT via skoler
 - Henter alle eksisterende appStudents fra db
 - Henter alle enterprise app users
@@ -12,7 +14,7 @@ Elevoppfølging server side jobs
 - Går gjennom alle elever fra FINT, og oppretter/oppdaterer appStudents, før vi replacer hele collection med appStudents med nye data.
 - Vi beholder alle elever i appStudents (sletter ingen elever automatisk), selv om de har blitt borte fra FINT. Men setter de til active false hvis de ikke har noen aktive elevforhold lenger.
 - Før vi oppdaterer elever basert på FINT-data wiper vi alle AUTOMATISKE elevforhold (altså de som kommer fra FINT), men vi beholder manuelle elevforhold (som er opprettet av brukere i APP'en, rådgivere eller no)
-- Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT 
+- Hvis en elev er opprettet manuelt, men plutselig dukker opp i FINT (med samme fnr), setter vi alle manuelle elevforhold til inaktivt på de manuelle skolene, der det har nå kommet et elevforhold på tilsvarende skole i FINT
 - Setter IKKE manuelle elevforhold til aktive igjen hvis eleven forsvinner fra FINT
 - Replacer collections med de nye dataene (users, students, access, schools)
 - Sikrer at indeksering er satt på collections
@@ -85,6 +87,7 @@ FINT_GENERATE_TYPES_MANUAL_KEY=""
   - Kjør `npm run generate-fint-types-v3`. Scriptet vil da hente metadata fra FINT API'et, og generere TypeScript-typer i `./src/types/fint/` basert på denne metadataen.
 
 #### get-and-create-if-not-exists-encryption-keys
+
 Gets (and creates if missing) a given number of data encryption keys (see script file)
 Must be run before initial startup of elevoppfølging web app for it to work.
 
@@ -103,6 +106,7 @@ MONGODB_DB_NAME="<db-name>"
 ```
 
 #### rewrap-encryption-keys
+
 Decrypts all data encryption keys, and reencrypts them with the new master key
 
 requires following values in `./.env`
@@ -126,6 +130,7 @@ MONGODB_DB_NAME="<db-name>"
 5. If not good, pray more
 
 #### get-document-count-per-template
+
 Gets all documents, all templates and counts the template usage. Outputs the sorted result to `./usage/document-count-per-template.json`
 
 requires following values in `./.env`
