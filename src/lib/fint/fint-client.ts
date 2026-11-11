@@ -74,7 +74,7 @@ export class FintClient implements IFintClient {
     })
 
     if (!response.ok) {
-      const error = await response.json()
+      const error: string = await response.text()
       logger.error("Failed to call FINT {FintVersion} graphql endpoint. Status: {Status}. StatusText: {StatusText}. Error: {@Error}", authOptions.VERSION, response.status, response.statusText, error)
       throw new Error(`Failed to call FINT ${authOptions.VERSION} graphql endpoint. Status: ${response.status}. StatusText: ${response.statusText}`)
     }
