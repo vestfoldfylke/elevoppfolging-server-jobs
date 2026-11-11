@@ -15,5 +15,6 @@ jobs:
       azure_appname: "vfkplzmineleveloprodsj"
       azure_functionapp_package_path: "."
       audit_severity: "high"
+      log_azure_deploy_content: ${{ vars.LOG_AZURE_DEPLOY_CONTENT == 'true' }}
     secrets:
       azure_publishprofile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PROD }}
